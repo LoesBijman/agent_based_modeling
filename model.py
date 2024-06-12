@@ -26,21 +26,12 @@ class CrowdAgent(Agent):
 			distance_to_goal = np.linalg.norm(np.array(self.pos) - np.array(goal["location"]))
 			if distance_to_goal < self.model.goal_radius:
 				known_goals.append(goal)
-		
-		if known_goals:
-			# Sort known goals by priority and select the highest priority goal
-			self.current_goal = sorted(known_goals, key=lambda x: x["priority"], reverse=True)[0]
-			self.knows_goal = True
-		else:
-			self.knows_goal = False
+
+		# Sort known goals by priority and select the highest priority goal
+		self.current_goal = sorted(known_goals, key=lambda x: x["priority"], reverse=True)[0]
+		self.knows_goal = True
 
 	def move_towards_goal(self):
-		if self.knows_goal:
-			self.move_towards_known_goal()
-		else:
-			self.follow_crowd()
-
-	def move_towards_known_goal(self):
 		x, y = self.pos
 		goal_x, goal_y = self.current_goal["location"]
 
@@ -71,17 +62,6 @@ class CrowdAgent(Agent):
 			# print the number of steps it took for all agents to reach the goal
 			print(f"Number of steps: {self.model.schedule.steps}")
 
-	def follow_crowd(self):
-		# get crowd density around the agent
-		x, y = self.pos
-		neighbors = self.model.grid.get_neighbors((x, y), moore=True, include_center=False, radius=5)
-		# move towards the average position of the neighbors
-		if len(neighbors) > 0:
-			avg_x = np.mean([pos[0] for pos in [neighbor.pos for neighbor in neighbors]])
-			avg_y = np.mean([pos[1] for pos in [neighbor.pos for neighbor in neighbors]])
-			new_position = (int(avg_x), int(avg_y))
-			if self.model.grid.is_cell_empty(new_position):
-				self.model.grid.move_agent(self, new_position)
 
 class CrowdModel(Model):
 	def __init__(self, width, height, N, goal_radius):
