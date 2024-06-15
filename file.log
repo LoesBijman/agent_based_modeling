@@ -58,3 +58,4 @@
 2024-06-14 14:19:18,638|WARNING:[animation.py:1049                 save() ] MovieWriter imagemagick unavailable; using Pillow instead.
 2024-06-14 14:20:41,043|WARNING:[animation.py:1049                 save() ] MovieWriter imagemagick unavailable; using Pillow instead.
 2024-06-14 14:20:59,729|WARNING:[animation.py:1049                 save() ] MovieWriter imagemagick unavailable; using Pillow instead.
+2024-06-15 15:20:17,826|WARNING:[animation.py:1057                 save() ] MovieWriter imagemagick unavailable; using Pillow instead.
