@@ -26,11 +26,11 @@ class CrowdAgent(Agent):
         super().__init__(unique_id, model)
 
         # Define the goals that the agent can move towards
-        self.goals = [
-            {"location": (0, model.grid.height - 1), "priority": 1},
-            {"location": (model.grid.width - 1, 0), "priority": 2},
-            {"location": (model.grid.width - 1, model.grid.height - 1), "priority": 2}
-        ]
+        # self.goals = [
+        #     {"location": (0, model.grid.height - 1), "priority": 1},
+        #     {"location": (model.grid.width - 1, 0), "priority": 2},
+        #     {"location": (model.grid.width - 1, model.grid.height - 1), "priority": 2}
+        # ]
         self.current_goal = None
 
         self.knowledge_of_disaster = False
@@ -44,7 +44,10 @@ class CrowdAgent(Agent):
         # Update the agent's knowledge of the disaster
         for fire in self.model.fire:
             if np.linalg.norm(np.array(self.pos) - np.array(fire.pos)) < self.model.fire_radius:
-                self.knowledge_of_disaster = True
+                # spread knowledge stochastically
+                u = np.random.uniform(0,1)
+                if u < self.model.p_spreading:
+                    self.knowledge_of_disaster = True
         
         disaster_knowing_agents = [agent for agent in self.model.schedule.agents if isinstance(agent, CrowdAgent) and agent.knowledge_of_disaster]
 
@@ -57,7 +60,7 @@ class CrowdAgent(Agent):
 
         else:
             if self.knowledge_of_environment:
-                self.current_goal = self.goals[0]  # Set a default goal
+                self.current_goal = self.model.goals[0]  # Set a default goal
                 self.move_towards_goal()
             else:
                 # random exploration
@@ -78,14 +81,14 @@ class CrowdAgent(Agent):
         neighbors = self.model.grid.get_neighborhood(self.pos, moore=True, include_center=False)
         valid_neighbors = [(nx, ny) for nx, ny in neighbors if 0 <= nx < self.model.grid.width and 0 <= ny < self.model.grid.height]
         distances = [(neighbor, np.linalg.norm(np.array(neighbor) - np.array(self.current_goal["location"])))
-                     for neighbor in valid_neighbors if self.model.grid.is_cell_empty(neighbor)]
+                     for neighbor in valid_neighbors if self.model.grid.is_cell_empty(neighbor) or neighbor == self.current_goal["location"]]
         
         # Move to the neighboring cell that is closest to the goal and empty
         if distances:
             next_move = min(distances, key=lambda t: t[1])[0]
             self.model.grid.move_agent(self, next_move)
 
-        # Check if the agent has reached the goal, and remove it from the model if it has
+        # Check if the agent has reached the goal or adjacent cell, and remove it from the model if it has
         if self.pos == self.current_goal["location"]:
             if self.at_goal_timer == 0:
                 print(f"Agent {self.unique_id} reached the goal!")
@@ -132,7 +135,7 @@ class CrowdModel(Model):
         step(self): Advances the model by one step.
     """
 
-    def __init__(self, width, height, N, goal_radius, fire_radius, fire_locations, social_radius):
+    def __init__(self, width, height, N, goal_radius, fire_radius, fire_locations, social_radius, p_spreading, exits):
         """
         Initializes a CrowdModel object.
 
@@ -151,6 +154,7 @@ class CrowdModel(Model):
         self.goal_radius = goal_radius
         self.fire_radius = fire_radius
         self.social_radius = social_radius
+        self.p_spreading = p_spreading
         
         self.running = True  # Initialize the running state
 
@@ -159,8 +163,21 @@ class CrowdModel(Model):
         )
         self.num_agents_removed = 0  # Track the number of agents removed
 
+        # self.goals = [
+        #     {"location": (0, model.grid.height - 1), "radius": 1},
+        #     {"location": (model.grid.width - 1, 0), "radius": 2},
+        #     {"location": (model.grid.width - 1, model.grid.height - 1), "radius": 2}
+        # ]
+        self.goals = exits
+
+        for i, exit in enumerate(exits):
+            x, y = exit["location"]
+            goal = Goal(i, self)
+            self.schedule.add(goal)
+            self.grid.place_agent(goal, (x,y))
+
+
         # Create a fire
-        # self.fire = []
         for i, fire_loc in enumerate(fire_locations):
             x, y = fire_loc
             fire = Hazard(i, self)
@@ -201,6 +218,10 @@ class Hazard(Agent):
     def __init__(self, unique_id, model):
         super().__init__(unique_id, model)
 
+class Goal(Agent):
+    def __init__(self, unique_id, model):
+        super().__init__(unique_id, model)
+
 def portrayal(agent):
     """
     Returns the visualization for a given agent.
@@ -236,13 +257,37 @@ def portrayal(agent):
             "Color": "red",
             "Layer": 1
         }
+
+    elif isinstance(agent, Goal):
+        portrayal = {
+            "Shape": "rect",
+            "w": 1,
+            "h": 1,
+            "Filled": "true",
+            "Color": "black",
+            "Layer": 2
+        }
     return portrayal
 
 
 # Init stuff
+
+# Goals
+width = 20
+height = 20
+N = 100
+goal_radius = 10
+fire_radius = 10
+fire_locations = [[0,0], [0,1], [0,2]]
+social_radius = 3
+p_spreading = 0.2
+exits = [ {"location": (0, height - 1), "radius": 10},
+          {"location": (width - 1, 0), "radius": 2},
+          {"location": (width - 1, height - 1), "radius": 2}]
 grid = CanvasGrid(portrayal, 20, 20, 500, 500)
 
-server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": 20, "height": 20, "N": 100, "goal_radius": 10, "fire_radius": 10, "fire_locations": [[0,0], [0,1], [0,2]], 'social_radius': 2})
+# server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": 20, "height": 20, "N": 100, "goal_radius": 10, "fire_radius": 10, "fire_locations": [[0,0], [0,1], [0,2]], 'social_radius': 3, 'p_spreading': 0.5})
+server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "goal_radius": goal_radius, "fire_radius": fire_radius, "fire_locations": fire_locations, 'social_radius': social_radius, 'p_spreading': p_spreading, 'exits': exits})
 server.port = 9998
 server.launch()
 
