@@ -27,12 +27,13 @@ class CrowdAgent(Agent):
         self.goals = [
             {"location": (0, model.grid.height - 1), "priority": 1},
             {"location": (model.grid.width - 1, 0), "priority": 2},
-            {"location": (model.grid.width - 1, model.grid.height - 1), "priority": 2}
+            {"location": (model.grid.width - 1, model.grid.height - 1), "priority": 2},
+            {"location": (10, 10), "priority": 3}
         ]
         self.current_goal = None
 
         self.knowledge_of_disaster = True
-        self.knowledge_of_environment = False
+        self.knowledge_of_environment = True
 
     def step(self):
         """
@@ -42,7 +43,7 @@ class CrowdAgent(Agent):
             self.stand_still()
         else:
             if self.knowledge_of_environment:
-                self.current_goal = self.goals[0]  # Set a default goal
+                self.current_goal = self.goals[3]  # Set a default goal
                 self.move_towards_goal()
             else:
                 # random exploration
@@ -55,28 +56,20 @@ class CrowdAgent(Agent):
         if self.current_goal is None:
             return  # No goal to move towards
 
-        # own position and goal position
+        # Own position and goal position
         x, y = self.pos
         goal_x, goal_y = self.current_goal["location"]
 
-        # change in position
-        dx = np.sign(goal_x - x)
-        dy = np.sign(goal_y - y)
-
-        # new position
-        new_position = (x + dx, y + dy)
-
-        # move agent to new position if it is empty
-        if self.model.grid.is_cell_empty(new_position):
-            self.model.grid.move_agent(self, new_position)
-        else:
-            # check for second best option if the first option is not available (not sure if this works as intended)
-            if dx == 0:
-                new_position = (x, y + dy)
-            elif dy == 0:
-                new_position = (x + dx, y)
-            if self.model.grid.is_cell_empty(new_position):
-                self.model.grid.move_agent(self, new_position)
+        # Calculate the distance to the goal for all neighboring cells
+        neighbors = self.model.grid.get_neighborhood(self.pos, moore=True, include_center=False)
+        valid_neighbors = [(nx, ny) for nx, ny in neighbors if 0 <= nx < self.model.grid.width and 0 <= ny < self.model.grid.height]
+        distances = [(neighbor, np.linalg.norm(np.array(neighbor) - np.array(self.current_goal["location"])))
+                     for neighbor in valid_neighbors if self.model.grid.is_cell_empty(neighbor)]
+        
+        # Move to the neighboring cell that is closest to the goal and empty
+        if distances:
+            next_move = min(distances, key=lambda t: t[1])[0]
+            self.model.grid.move_agent(self, next_move)
 
         # Check if the agent has reached the goal, and remove it from the model if it has
         if self.pos == self.current_goal["location"]:
@@ -101,7 +94,8 @@ class CrowdAgent(Agent):
         The agent moves randomly.
         """
         possible_steps = self.model.grid.get_neighborhood(self.pos, moore=True, include_center=False)
-        new_position = self.random.choice(possible_steps)
+        valid_steps = [(nx, ny) for nx, ny in possible_steps if 0 <= nx < self.model.grid.width and 0 <= ny < self.model.grid.height]
+        new_position = self.random.choice(valid_steps)
         if self.model.grid.is_cell_empty(new_position):
             self.model.grid.move_agent(self, new_position)
 
@@ -132,7 +126,7 @@ class CrowdModel(Model):
             goal_radius (float): The radius of the goal area.
         """
         self.num_agents = N
-        self.grid = MultiGrid(width, height, True)
+        self.grid = MultiGrid(width, height, False)  # Set torus to False for bounded grid
         self.schedule = RandomActivation(self)
         self.goal_radius = goal_radius
 
@@ -175,5 +169,5 @@ def agent_portrayal(agent):
 grid = CanvasGrid(agent_portrayal, 20, 20, 500, 500)
 
 server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": 20, "height": 20, "N": 100, "goal_radius": 10})
-server.port = 9998
+server.port = 9934
 server.launch()
