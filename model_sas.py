@@ -5,6 +5,7 @@ from mesa.visualization.modules import CanvasGrid
 from mesa.datacollection import DataCollector
 from mesa.visualization.ModularVisualization import ModularServer
 import numpy as np
+import pandas as pd
 
 
 class CrowdAgent(Agent):
@@ -33,7 +34,7 @@ class CrowdAgent(Agent):
         ]
         self.current_goal = None
 
-        self.knowledge_of_disaster = True
+        self.knowledge_of_disaster = False
         self.knowledge_of_environment = True
         self.at_goal_timer = 1
 
@@ -41,8 +42,20 @@ class CrowdAgent(Agent):
         """
         Performs a step in the agent's behavior.
         """
+        # Update the agent's knowledge of the disaster
+        for fire in self.model.fire:
+            if np.linalg.norm(np.array(self.pos) - np.array(fire.pos)) < self.model.fire_radius:
+                self.knowledge_of_disaster = True
+        
+        disaster_knowing_agents = [agent for agent in self.model.schedule.agents if isinstance(agent, CrowdAgent) and agent.knowledge_of_disaster]
+
+        # Perform step
         if not self.knowledge_of_disaster:
+            for dis_agent in disaster_knowing_agents:
+                if np.linalg.norm(np.array(self.pos) - np.array(dis_agent.pos)) < self.model.social_radius:
+                    self.knowledge_of_disaster = True
             self.stand_still()
+
         else:
             if self.knowledge_of_environment:
                 self.current_goal = self.goals[0]  # Set a default goal
@@ -120,7 +133,7 @@ class CrowdModel(Model):
         step(self): Advances the model by one step.
     """
 
-    def __init__(self, width, height, N, goal_radius, fire_radius, fire_locations):
+    def __init__(self, width, height, N, goal_radius, fire_radius, fire_locations, social_radius):
         """
         Initializes a CrowdModel object.
 
@@ -130,7 +143,7 @@ class CrowdModel(Model):
             N (int): The number of agents in the model.
             goal_radius (float): The radius of the goal area.
         """
-            
+
         assert len(fire_locations) < ((width * height) - N) / 2, 'Too many fire locations for amount of agents'
 
         self.num_agents = N - len(fire_locations)
@@ -138,21 +151,25 @@ class CrowdModel(Model):
         self.schedule = RandomActivation(self)
         self.goal_radius = goal_radius
         self.fire_radius = fire_radius
+        self.social_radius = social_radius
         
         self.running = True  # Initialize the running state
 
         self.datacollector = DataCollector(
             {"Agents Removed": lambda m: m.num_agents_removed}
         )
-        self.num_agents_removed = 0
+        self.num_agents_removed = 0  # Track the number of agents removed
 
         # Create a fire
-        self.fire = []
+        # self.fire = []
         for i, fire_loc in enumerate(fire_locations):
             x, y = fire_loc
             fire = Hazard(i, self)
             self.schedule.add(fire)
             self.grid.place_agent(fire, (x,y))
+
+        # retrieve the fire locations
+        self.fire = [agent for agent in self.schedule.agents if isinstance(agent, Hazard)]
 
         # Create agents and place them in the model
         for i in range(self.num_agents):
@@ -196,13 +213,22 @@ def portrayal(agent):
     dict: The portrayal dictionary containing the agent's shape, color, size, and layer.
     """
     if isinstance(agent, CrowdAgent):
-        portrayal = {
-            "Shape": "circle",
-            "Filled": "true",
-            "r": 0.5,
-            "Color": "blue",
-            "Layer": 0
-        }
+        if agent.knowledge_of_disaster:
+            portrayal = {
+                "Shape": "circle",
+                "Filled": "true",
+                "r": 0.5,
+                "Color": "green",
+                "Layer": 0
+            }
+        else:
+            portrayal = {
+                "Shape": "circle",
+                "Filled": "true",
+                "r": 0.5,
+                "Color": "blue",
+                "Layer": 0
+            }
     elif isinstance(agent, Hazard):
         portrayal = {
             "Shape": "circle",
@@ -214,14 +240,42 @@ def portrayal(agent):
     return portrayal
 
 
-# Init stuff
-grid = CanvasGrid(portrayal, 20, 20, 500, 500)
+# # Initialize visualization
+# grid = CanvasGrid(portrayal, 20, 20, 500, 500)
 
-server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": 20, "height": 20, "N": 100, "goal_radius": 10, "fire_radius": 10, "fire_locations": [[0,0], [0,1], [0,2]]})
-server.port = 9998
-server.launch()
+# # Initialize the server with the model
+# server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": 20, "height": 20, "N": 100, "goal_radius": 10, "fire_radius": 10, "fire_locations": [[0,0], [0,1], [0,2]], 'social_radius': 2})
+# server.port = 9998
+# server.launch()
+# data = server.model.datacollector.get_model_vars_dataframe()
+# data.to_csv("agents_removed_per_step.csv", index=False)
 
-data = server.model.datacollector.get_model_vars_dataframe()
-data.to_csv("agents_removed_per_step.csv", index=False)
+# print("Data 1 saved successfully!")
 
-print("Data saved successfully!")
+# # Define the number of runs
+# num_runs = 5  # Adjust as needed
+
+# # Initialize an empty DataFrame to store all data
+# all_data = pd.DataFrame()
+
+# # Run the model multiple times
+# for i in range(num_runs):
+#     print(f"Running model {i + 1}...")
+#     server.model = CrowdModel(20, 20, 100, 10, 10, [[0,0], [0,1], [0,2]], 2)  # Reset the model
+#     server.model.run_model()  # Run the model
+    
+#     # Get data for the current run
+#     data_new = server.model.datacollector.get_model_vars_dataframe()
+    
+#     # Rename columns to include run number
+#     data_new.columns = [f"Run_{i+1}_{col}" for col in data_new.columns]
+    
+#     data_new = data_new.astype(int)
+    
+#     # Concatenate data for the current run to all_data
+#     all_data = pd.concat([all_data, data_new], axis=1)
+
+# # Save all_data to CSV with each run's data in separate columns
+# all_data.to_csv("agents_removed_per_step_all_runs.csv", index=False)
+
+# print("Data 2 saved successfully!")
