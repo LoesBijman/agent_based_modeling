@@ -34,6 +34,7 @@ class CrowdAgent(Agent):
 
         self.knowledge_of_disaster = True
         self.knowledge_of_environment = True
+        self.at_goal_timer = 1
 
     def step(self):
         """
@@ -73,9 +74,13 @@ class CrowdAgent(Agent):
 
         # Check if the agent has reached the goal, and remove it from the model if it has
         if self.pos == self.current_goal["location"]:
-            print(f"Agent {self.unique_id} reached the goal!")
-            self.model.grid.remove_agent(self)
-            self.model.schedule.remove(self)
+            if self.at_goal_timer == 0:
+                print(f"Agent {self.unique_id} reached the goal!")
+                self.model.grid.remove_agent(self)
+                self.model.schedule.remove(self)
+            elif self.at_goal_timer == 1:
+                self.at_goal_timer -= 1
+
 
         # If all agents have reached the goal, stop the model
         if len(self.model.schedule.agents) == 0:
