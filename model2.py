@@ -27,14 +27,12 @@ class CrowdAgent(Agent):
         self.goals = [
             {"location": (0, model.grid.height - 1), "priority": 1},
             {"location": (model.grid.width - 1, 0), "priority": 2},
-            {"location": (model.grid.width - 1, model.grid.height - 1), "priority": 2},
-            {"location": (10, 10), "priority": 3}
+            {"location": (model.grid.width - 1, model.grid.height - 1), "priority": 2}
         ]
         self.current_goal = None
 
         self.knowledge_of_disaster = True
-        self.knowledge_of_environment = True
-        self.at_goal_timer = 1
+        self.knowledge_of_environment = False
 
     def step(self):
         """
@@ -44,7 +42,7 @@ class CrowdAgent(Agent):
             self.stand_still()
         else:
             if self.knowledge_of_environment:
-                self.current_goal = self.goals[3]  # Set a default goal
+                self.current_goal = self.goals[0]  # Set a default goal
                 self.move_towards_goal()
             else:
                 # random exploration
@@ -57,30 +55,34 @@ class CrowdAgent(Agent):
         if self.current_goal is None:
             return  # No goal to move towards
 
-        # Own position and goal position
+        # own position and goal position
         x, y = self.pos
         goal_x, goal_y = self.current_goal["location"]
 
-        # Calculate the distance to the goal for all neighboring cells
-        neighbors = self.model.grid.get_neighborhood(self.pos, moore=True, include_center=False)
-        valid_neighbors = [(nx, ny) for nx, ny in neighbors if 0 <= nx < self.model.grid.width and 0 <= ny < self.model.grid.height]
-        distances = [(neighbor, np.linalg.norm(np.array(neighbor) - np.array(self.current_goal["location"])))
-                     for neighbor in valid_neighbors if self.model.grid.is_cell_empty(neighbor)]
-        
-        # Move to the neighboring cell that is closest to the goal and empty
-        if distances:
-            next_move = min(distances, key=lambda t: t[1])[0]
-            self.model.grid.move_agent(self, next_move)
+        # change in position
+        dx = np.sign(goal_x - x)
+        dy = np.sign(goal_y - y)
+
+        # new position
+        new_position = (x + dx, y + dy)
+
+        # move agent to new position if it is empty
+        if self.model.grid.is_cell_empty(new_position):
+            self.model.grid.move_agent(self, new_position)
+        else:
+            # check for second best option if the first option is not available (not sure if this works as intended)
+            if dx == 0:
+                new_position = (x, y + dy)
+            elif dy == 0:
+                new_position = (x + dx, y)
+            if self.model.grid.is_cell_empty(new_position):
+                self.model.grid.move_agent(self, new_position)
 
         # Check if the agent has reached the goal, and remove it from the model if it has
         if self.pos == self.current_goal["location"]:
-            if self.at_goal_timer == 0:
-                print(f"Agent {self.unique_id} reached the goal!")
-                self.model.grid.remove_agent(self)
-                self.model.schedule.remove(self)
-            elif self.at_goal_timer == 1:
-                self.at_goal_timer -= 1
-
+            print(f"Agent {self.unique_id} reached the goal!")
+            self.model.grid.remove_agent(self)
+            self.model.schedule.remove(self)
 
         # If all agents have reached the goal, stop the model
         if len(self.model.schedule.agents) == 0:
@@ -99,8 +101,7 @@ class CrowdAgent(Agent):
         The agent moves randomly.
         """
         possible_steps = self.model.grid.get_neighborhood(self.pos, moore=True, include_center=False)
-        valid_steps = [(nx, ny) for nx, ny in possible_steps if 0 <= nx < self.model.grid.width and 0 <= ny < self.model.grid.height]
-        new_position = self.random.choice(valid_steps)
+        new_position = self.random.choice(possible_steps)
         if self.model.grid.is_cell_empty(new_position):
             self.model.grid.move_agent(self, new_position)
 
@@ -130,15 +131,31 @@ class CrowdModel(Model):
             N (int): The number of agents in the model.
             goal_radius (float): The radius of the goal area.
         """
+        fire_locations = [[0,0], [0,1], [0,2]]
+    
+        assert len(fire_locations) < ((width * height) - N) / 2, 'Too many fire locations for amount of agents'
+
         self.num_agents = N
-        self.grid = MultiGrid(width, height, False)  # Set torus to False for bounded grid
+        self.grid = MultiGrid(width, height, True)
         self.schedule = RandomActivation(self)
         self.goal_radius = goal_radius
+
+        # Create a fire
+        self.fire = []
+        for i, fire_loc in enumerate(fire_locations):
+            x, y = fire_loc
+            fire = Hazard(i, self)
+            self.schedule.add(fire)
+            self.grid.place_agent(fire, (x,y))
 
         # Create agents and place them in the model
         for i in range(self.num_agents):
             x = self.random.randint(0, width - 1)
             y = self.random.randint(0, height - 1)
+            while (x,y) in fire_locations:
+                x = self.random.randint(0, width - 1)
+                y = self.random.randint(0, height - 1)
+
             agent = CrowdAgent(i, self)
             self.schedule.add(agent)
             self.grid.place_agent(agent, (x, y))
@@ -149,8 +166,11 @@ class CrowdModel(Model):
         """
         self.schedule.step()
 
+class Hazard(Agent):
+    def __init__(self, unique_id, model):
+        super().__init__(unique_id, model)
 
-def agent_portrayal(agent):
+def portrayal(agent):
     """
     Returns the visualization for a given agent.
 
@@ -160,19 +180,28 @@ def agent_portrayal(agent):
     Returns:
     dict: The portrayal dictionary containing the agent's shape, color, size, and layer.
     """
-    portrayal = {
-        "Shape": "circle",
-        "Filled": "true",
-        "r": 0.5,
-        "Color": "blue",
-        "Layer": 0
-    }
+    if isinstance(agent, CrowdAgent):
+        portrayal = {
+            "Shape": "circle",
+            "Filled": "true",
+            "r": 0.5,
+            "Color": "blue",
+            "Layer": 0
+        }
+    elif isinstance(agent, Hazard):
+        portrayal = {
+            "Shape": "circle",
+            "Filled": "true",
+            "r": 0.5,
+            "Color": "red",
+            "Layer": 1
+        }
     return portrayal
 
 
 # Init stuff
-grid = CanvasGrid(agent_portrayal, 20, 20, 500, 500)
+grid = CanvasGrid(portrayal, 20, 20, 500, 500)
 
 server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": 20, "height": 20, "N": 100, "goal_radius": 10})
-server.port = 9934
+server.port = 9998
 server.launch()
