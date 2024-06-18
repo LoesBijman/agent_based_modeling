@@ -42,14 +42,19 @@ class CrowdAgent(Agent):
         Performs a step in the agent's behavior.
         """
         # Update the agent's knowledge of the disaster
-        print("printtttttt", self.model.fire[0].pos)
         for fire in self.model.fire:
             if np.linalg.norm(np.array(self.pos) - np.array(fire.pos)) < self.model.fire_radius:
                 self.knowledge_of_disaster = True
+        
+        disaster_knowing_agents = [agent for agent in self.model.schedule.agents if isinstance(agent, CrowdAgent) and agent.knowledge_of_disaster]
 
         # Perform step
         if not self.knowledge_of_disaster:
+            for dis_agent in disaster_knowing_agents:
+                if np.linalg.norm(np.array(self.pos) - np.array(dis_agent.pos)) < self.model.social_radius:
+                    self.knowledge_of_disaster = True
             self.stand_still()
+
         else:
             if self.knowledge_of_environment:
                 self.current_goal = self.goals[0]  # Set a default goal
@@ -127,7 +132,7 @@ class CrowdModel(Model):
         step(self): Advances the model by one step.
     """
 
-    def __init__(self, width, height, N, goal_radius, fire_radius, fire_locations):
+    def __init__(self, width, height, N, goal_radius, fire_radius, fire_locations, social_radius):
         """
         Initializes a CrowdModel object.
 
@@ -145,6 +150,7 @@ class CrowdModel(Model):
         self.schedule = RandomActivation(self)
         self.goal_radius = goal_radius
         self.fire_radius = fire_radius
+        self.social_radius = social_radius
         
         self.running = True  # Initialize the running state
 
@@ -229,7 +235,7 @@ def portrayal(agent):
 # Init stuff
 grid = CanvasGrid(portrayal, 20, 20, 500, 500)
 
-server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": 20, "height": 20, "N": 100, "goal_radius": 10, "fire_radius": 10, "fire_locations": [[0,0], [0,1], [0,2]]})
+server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": 20, "height": 20, "N": 100, "goal_radius": 10, "fire_radius": 10, "fire_locations": [[0,0], [0,1], [0,2]], 'social_radius': 2})
 server.port = 9998
 server.launch()
 
