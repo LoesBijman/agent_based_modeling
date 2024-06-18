@@ -145,7 +145,7 @@ class CrowdModel(Model):
 
         assert len(fire_locations) < ((width * height) - N) / 2, 'Too many fire locations for amount of agents'
 
-        self.num_agents = N
+        self.num_agents = N - len(fire_locations)
         self.grid = MultiGrid(width, height, False)
         self.schedule = RandomActivation(self)
         self.goal_radius = goal_radius
@@ -186,9 +186,16 @@ class CrowdModel(Model):
         """
         Advances the model by one step.
         """
-        self.num_agents_removed = self.num_agents - len(self.schedule.agents)
+        # Collect data on the number of CrowdAgents removed
+        self.num_agents_removed = self.num_agents - sum(1 for agent in self.schedule.agents if isinstance(agent, CrowdAgent))
         self.datacollector.collect(self)
         self.schedule.step()
+        
+        # Check if all CrowdAgents have reached their goals
+        all_agents_reached_goal = all(agent.current_goal is None for agent in self.schedule.agents if isinstance(agent, CrowdAgent))
+        if all_agents_reached_goal:
+            self.running = False
+            print(f"Number of steps: {self.schedule.steps}")
 
 class Hazard(Agent):
     def __init__(self, unique_id, model):

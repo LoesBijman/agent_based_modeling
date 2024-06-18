@@ -171,7 +171,6 @@ class CrowdModel(Model):
         Advances the model by one step.
         """
         # Collect data on the number of CrowdAgents removed
-        # self.num_agents_removed = self.num_agents - len(self.schedule.agents)
         self.num_agents_removed = self.num_agents - sum(1 for agent in self.schedule.agents if isinstance(agent, CrowdAgent))
         self.datacollector.collect(self)
         self.schedule.step()
