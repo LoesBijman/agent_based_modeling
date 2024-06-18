@@ -27,8 +27,7 @@ class CrowdAgent(Agent):
         self.goals = [
             {"location": (0, model.grid.height - 1), "priority": 1},
             {"location": (model.grid.width - 1, 0), "priority": 2},
-            {"location": (model.grid.width - 1, model.grid.height - 1), "priority": 2},
-            {"location": (10, 10), "priority": 3}
+            {"location": (model.grid.width - 1, model.grid.height - 1), "priority": 2}
         ]
         self.current_goal = None
 
@@ -44,7 +43,7 @@ class CrowdAgent(Agent):
             self.stand_still()
         else:
             if self.knowledge_of_environment:
-                self.current_goal = self.goals[3]  # Set a default goal
+                self.current_goal = self.goals[0]  # Set a default goal
                 self.move_towards_goal()
             else:
                 # random exploration
@@ -99,8 +98,7 @@ class CrowdAgent(Agent):
         The agent moves randomly.
         """
         possible_steps = self.model.grid.get_neighborhood(self.pos, moore=True, include_center=False)
-        valid_steps = [(nx, ny) for nx, ny in possible_steps if 0 <= nx < self.model.grid.width and 0 <= ny < self.model.grid.height]
-        new_position = self.random.choice(valid_steps)
+        new_position = self.random.choice(possible_steps)
         if self.model.grid.is_cell_empty(new_position):
             self.model.grid.move_agent(self, new_position)
 
@@ -130,15 +128,31 @@ class CrowdModel(Model):
             N (int): The number of agents in the model.
             goal_radius (float): The radius of the goal area.
         """
+        fire_locations = [[0,0], [0,1], [0,2]]
+    
+        assert len(fire_locations) < ((width * height) - N) / 2, 'Too many fire locations for amount of agents'
+
         self.num_agents = N
-        self.grid = MultiGrid(width, height, False)  # Set torus to False for bounded grid
+        self.grid = MultiGrid(width, height, False)
         self.schedule = RandomActivation(self)
         self.goal_radius = goal_radius
+
+        # Create a fire
+        self.fire = []
+        for i, fire_loc in enumerate(fire_locations):
+            x, y = fire_loc
+            fire = Hazard(i, self)
+            self.schedule.add(fire)
+            self.grid.place_agent(fire, (x,y))
 
         # Create agents and place them in the model
         for i in range(self.num_agents):
             x = self.random.randint(0, width - 1)
             y = self.random.randint(0, height - 1)
+            while (x,y) in fire_locations:
+                x = self.random.randint(0, width - 1)
+                y = self.random.randint(0, height - 1)
+
             agent = CrowdAgent(i, self)
             self.schedule.add(agent)
             self.grid.place_agent(agent, (x, y))
@@ -149,8 +163,11 @@ class CrowdModel(Model):
         """
         self.schedule.step()
 
+class Hazard(Agent):
+    def __init__(self, unique_id, model):
+        super().__init__(unique_id, model)
 
-def agent_portrayal(agent):
+def portrayal(agent):
     """
     Returns the visualization for a given agent.
 
@@ -160,19 +177,28 @@ def agent_portrayal(agent):
     Returns:
     dict: The portrayal dictionary containing the agent's shape, color, size, and layer.
     """
-    portrayal = {
-        "Shape": "circle",
-        "Filled": "true",
-        "r": 0.5,
-        "Color": "blue",
-        "Layer": 0
-    }
+    if isinstance(agent, CrowdAgent):
+        portrayal = {
+            "Shape": "circle",
+            "Filled": "true",
+            "r": 0.5,
+            "Color": "blue",
+            "Layer": 0
+        }
+    elif isinstance(agent, Hazard):
+        portrayal = {
+            "Shape": "circle",
+            "Filled": "true",
+            "r": 0.5,
+            "Color": "red",
+            "Layer": 1
+        }
     return portrayal
 
 
 # Init stuff
-grid = CanvasGrid(agent_portrayal, 20, 20, 500, 500)
+grid = CanvasGrid(portrayal, 20, 20, 500, 500)
 
 server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": 20, "height": 20, "N": 100, "goal_radius": 10})
-server.port = 9934
+server.port = 9998
 server.launch()
