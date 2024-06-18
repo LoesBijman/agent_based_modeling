@@ -136,6 +136,13 @@ class CrowdModel(Model):
         self.grid = MultiGrid(width, height, False)
         self.schedule = RandomActivation(self)
         self.goal_radius = goal_radius
+        
+        self.running = True  # Initialize the running state
+
+        self.datacollector = DataCollector(
+            {"Agents Removed": lambda m: m.num_agents_removed}
+        )
+        self.num_agents_removed = 0  # Track the number of agents removed
 
         # Create a fire
         self.fire = []
@@ -161,6 +168,8 @@ class CrowdModel(Model):
         """
         Advances the model by one step.
         """
+        self.num_agents_removed = self.num_agents - len(self.schedule.agents)
+        self.datacollector.collect(self)
         self.schedule.step()
 
 class Hazard(Agent):
