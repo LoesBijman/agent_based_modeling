@@ -120,7 +120,7 @@ class CrowdModel(Model):
         step(self): Advances the model by one step.
     """
 
-    def __init__(self, width, height, N, goal_radius):
+    def __init__(self, width, height, N, goal_radius, fire_radius, fire_locations):
         """
         Initializes a CrowdModel object.
 
@@ -130,14 +130,14 @@ class CrowdModel(Model):
             N (int): The number of agents in the model.
             goal_radius (float): The radius of the goal area.
         """
-        fire_locations = [[0,0], [0,1], [0,2]]
-    
+            
         assert len(fire_locations) < ((width * height) - N) / 2, 'Too many fire locations for amount of agents'
 
         self.num_agents = N
         self.grid = MultiGrid(width, height, False)
         self.schedule = RandomActivation(self)
         self.goal_radius = goal_radius
+        self.fire_radius = fire_radius
         
         self.running = True  # Initialize the running state
 
@@ -210,6 +210,11 @@ def portrayal(agent):
 # Init stuff
 grid = CanvasGrid(portrayal, 20, 20, 500, 500)
 
-server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": 20, "height": 20, "N": 100, "goal_radius": 10})
+server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": 20, "height": 20, "N": 100, "goal_radius": 10, "fire_radius": 10, "fire_locations": [[0,0], [0,1], [0,2]]})
 server.port = 9998
 server.launch()
+
+data = server.model.datacollector.get_model_vars_dataframe()
+data.to_csv("agents_removed_per_step.csv", index=False)
+
+print("Data saved successfully!")
