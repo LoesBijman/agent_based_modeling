@@ -33,7 +33,7 @@ class CrowdAgent(Agent):
         ]
         self.current_goal = None
 
-        self.knowledge_of_disaster = True
+        self.knowledge_of_disaster = False
         self.knowledge_of_environment = True
         self.at_goal_timer = 1
 
@@ -42,9 +42,10 @@ class CrowdAgent(Agent):
         Performs a step in the agent's behavior.
         """
         # Update the agent's knowledge of the disaster
-        print(self.model.fire[0])
-        # if np.linalg.norm(self.pos - self.model.fire[0].pos) < self.model.fire_radius:
-        #     self.knowledge_of_disaster = True
+        print("printtttttt", self.model.fire[0].pos)
+        for fire in self.model.fire:
+            if np.linalg.norm(np.array(self.pos) - np.array(fire.pos)) < self.model.fire_radius:
+                self.knowledge_of_disaster = True
 
         # Perform step
         if not self.knowledge_of_disaster:
@@ -153,12 +154,15 @@ class CrowdModel(Model):
         self.num_agents_removed = 0  # Track the number of agents removed
 
         # Create a fire
-        self.fire = []
+        # self.fire = []
         for i, fire_loc in enumerate(fire_locations):
             x, y = fire_loc
             fire = Hazard(i, self)
             self.schedule.add(fire)
             self.grid.place_agent(fire, (x,y))
+
+        # retrieve the fire locations
+        self.fire = [agent for agent in self.schedule.agents if isinstance(agent, Hazard)]
 
         # Create agents and place them in the model
         for i in range(self.num_agents):
@@ -195,13 +199,22 @@ def portrayal(agent):
     dict: The portrayal dictionary containing the agent's shape, color, size, and layer.
     """
     if isinstance(agent, CrowdAgent):
-        portrayal = {
-            "Shape": "circle",
-            "Filled": "true",
-            "r": 0.5,
-            "Color": "blue",
-            "Layer": 0
-        }
+        if agent.knowledge_of_disaster:
+            portrayal = {
+                "Shape": "circle",
+                "Filled": "true",
+                "r": 0.5,
+                "Color": "green",
+                "Layer": 0
+            }
+        else:
+            portrayal = {
+                "Shape": "circle",
+                "Filled": "true",
+                "r": 0.5,
+                "Color": "blue",
+                "Layer": 0
+            }
     elif isinstance(agent, Hazard):
         portrayal = {
             "Shape": "circle",
