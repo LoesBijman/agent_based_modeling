@@ -38,15 +38,15 @@ class CrowdAgent(Agent):
         """
         Performs a step in the agent's behavior.
         """
-        if self.knowledge_of_environment and self.knowledge_of_disaster:
-            self.current_goal = self.goals[0]  # Set a default goal
-            self.move_towards_goal()
-        elif self.knowledge_of_environment and not self.knowledge_of_disaster:
+        if not self.knowledge_of_disaster:
             self.stand_still()
-        elif not self.knowledge_of_environment and self.knowledge_of_disaster:
-            self.random_movement()
-        elif not self.knowledge_of_environment and not self.knowledge_of_disaster:
-            self.stand_still()
+        else:
+            if self.knowledge_of_environment:
+                self.current_goal = self.goals[0]  # Set a default goal
+                self.move_towards_goal()
+            else:
+                # random exploration
+                self.random_movement()
 
     def move_towards_goal(self):
         """
