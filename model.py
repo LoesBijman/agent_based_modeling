@@ -41,6 +41,12 @@ class CrowdAgent(Agent):
         """
         Performs a step in the agent's behavior.
         """
+        # Update the agent's knowledge of the disaster
+        print(self.model.fire[0])
+        # if np.linalg.norm(self.pos - self.model.fire[0].pos) < self.model.fire_radius:
+        #     self.knowledge_of_disaster = True
+
+        # Perform step
         if not self.knowledge_of_disaster:
             self.stand_still()
         else:
@@ -130,7 +136,7 @@ class CrowdModel(Model):
             N (int): The number of agents in the model.
             goal_radius (float): The radius of the goal area.
         """
-            
+
         assert len(fire_locations) < ((width * height) - N) / 2, 'Too many fire locations for amount of agents'
 
         self.num_agents = N
