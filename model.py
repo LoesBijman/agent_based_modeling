@@ -2,8 +2,10 @@ from mesa import Agent, Model
 from mesa.time import RandomActivation
 from mesa.space import MultiGrid
 from mesa.visualization.modules import CanvasGrid
+from mesa.datacollection import DataCollector
 from mesa.visualization.ModularVisualization import ModularServer
 import numpy as np
+
 
 class CrowdAgent(Agent):
     """
