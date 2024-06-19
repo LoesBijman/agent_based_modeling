@@ -159,13 +159,6 @@ class CrowdAgent(Agent):
             elif self.at_goal_timer == 1:
                 self.at_goal_timer -= 1
 
-
-        # # If all agents have reached the goal, stop the model
-        # if len(self.model.schedule.agents) == 0:
-        #     self.model.running = False
-        #     # print the number of steps it took for all agents to reach the goal
-        #     print(f"Number of steps: {self.model.schedule.steps}")
-
     def stand_still(self):
         """
         The agent stands still.
@@ -217,7 +210,8 @@ class CrowdModel(Model):
 
         assert len(fire_locations) < ((width * height) - N) / 2, 'Too many fire locations for amount of agents'
 
-        self.num_agents = N - len(fire_locations)
+        self.N = N
+        self.num_agents = N - len(fire_locations) - len(exits)
         self.grid = MultiGrid(width, height, False)
         self.schedule = RandomActivation(self)
         self.goal_radius = goal_radius
@@ -279,11 +273,19 @@ class CrowdModel(Model):
         self.schedule.step()
         
         # Check if all CrowdAgents have reached their goals  # CURRENT GOAL IS NOW ONLY COORDS (NOT A DICT)
-        all_agents_reached_goal = all(agent.current_goal is None for agent in self.schedule.agents if isinstance(agent, CrowdAgent))
-        for agent in self.schedule.agents:
-            if isinstance(agent, CrowdAgent):
-            
+        # all_agents_reached_goal = all(agent.current_goal is None for agent in self.schedule.agents if isinstance(agent, CrowdAgent))
+        # stopping = True
+        # for agent in self.schedule.agents:
+        #     if isinstance(agent, CrowdAgent):
+        #         stopping = False
+                  
+        # if stopping:
+        #     self.running = False
+        #     print(f"Number of steps: {self.schedule.steps}")
+        
+        if self.num_agents_removed == self.num_agents:
             self.running = False
+            # print the number of steps it took for all agents to reach the goal
             print(f"Number of steps: {self.schedule.steps}")
 
 class Hazard(Agent):
