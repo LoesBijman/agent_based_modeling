@@ -47,6 +47,9 @@ class CrowdAgent(Agent):
                 if np.linalg.norm(np.array(self.pos) - np.array(goal['location'])) < goal['radius']:
                     self.knowledge_of_environment.append(goal['location'])
 
+        # Spread knowledge of the environment
+        self.spread_knowledge()
+        
         # Update the agent's knowledge of the disaster
         for fire in self.model.fire:
             if np.linalg.norm(np.array(self.pos) - np.array(fire.pos)) < self.model.fire_radius:
@@ -82,7 +85,16 @@ class CrowdAgent(Agent):
             else:
                 # random exploration
                 self.random_movement()
-
+                
+    def spread_knowledge(self):
+        if self.random.random() < self.model.p_spreading_environment:
+            neighbors = self.model.grid.get_neighbors(self.pos, moore=True, radius=self.model.social_radius)
+            for neighbor in neighbors:
+                if isinstance(neighbor, CrowdAgent):
+                    if neighbor.current_goal:
+                        if neighbor.current_goal not in self.knowledge_of_environment:
+                            self.knowledge_of_environment.append(neighbor.current_goal)
+                    
     def move_towards_goal(self):
         """
         Moves the agent towards its current goal.
@@ -102,7 +114,16 @@ class CrowdAgent(Agent):
         
         # Move to the neighboring cell that is closest to the goal and empty
         if distances:
-            next_move = min(distances, key=lambda t: t[1])[0]
+            counter = 0
+            # check if next move is towards the fire
+            while near_fire:
+                near_fire = False
+                next_move = min(distances, key=lambda t: t[1])[counter]
+                for fire in self.model.fire:
+                    if np.linalg.norm(np.array(next_move) - np.array(fire.pos)) < 1:
+                        near_fire = True
+                counter += 1
+            
             self.model.grid.move_agent(self, next_move)
 
         # Check if the agent has reached the goal or adjacent cell, and remove it from the model if it has
@@ -132,6 +153,13 @@ class CrowdAgent(Agent):
         The agent moves randomly.
         """
         possible_steps = self.model.grid.get_neighborhood(self.pos, moore=True, include_center=False)
+        
+        for step in possible_steps:
+            for fire in self.model.fire:
+                if np.linalg.norm(np.array(step) - np.array(fire.pos)) < 1:
+                    possible_steps.remove(step)
+                    break
+                 
         new_position = self.random.choice(possible_steps)
         if self.model.grid.is_cell_empty(new_position):
             self.model.grid.move_agent(self, new_position)
@@ -152,7 +180,7 @@ class CrowdModel(Model):
         step(self): Advances the model by one step.
     """
 
-    def __init__(self, width, height, N, goal_radius, fire_radius, fire_locations, social_radius, p_spreading, exits):
+    def __init__(self, width, height, N, goal_radius, fire_radius, fire_locations, social_radius, p_spreading, p_spreading_environment, exits):
         """
         Initializes a CrowdModel object.
 
@@ -172,6 +200,7 @@ class CrowdModel(Model):
         self.fire_radius = fire_radius
         self.social_radius = social_radius
         self.p_spreading = p_spreading
+        self.p_spreading_environment = p_spreading_environment
         
         self.running = True  # Initialize the running state
 
@@ -307,14 +336,15 @@ fire_radius = 10
 fire_locations = [[0,0], [0,1], [0,2]]
 social_radius = 3
 p_spreading = 0.2
+p_spreading_environment = 0.3
 exits = [ {"location": (0, height - 1), "radius": 10},
           {"location": (width - 1, 0), "radius": 10},
           {"location": (width - 1, height - 1), "radius": 10}]
 grid = CanvasGrid(portrayal, 20, 20, 500, 500)
 
 # server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": 20, "height": 20, "N": 100, "goal_radius": 10, "fire_radius": 10, "fire_locations": [[0,0], [0,1], [0,2]], 'social_radius': 3, 'p_spreading': 0.5})
-server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "goal_radius": goal_radius, "fire_radius": fire_radius, "fire_locations": fire_locations, 'social_radius': social_radius, 'p_spreading': p_spreading, 'exits': exits})
-server.port = 9997
+server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "goal_radius": goal_radius, "fire_radius": fire_radius, "fire_locations": fire_locations, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'exits': exits})
+server.port = 9990
 server.launch()
 
 data = server.model.datacollector.get_model_vars_dataframe()
