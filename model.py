@@ -34,13 +34,19 @@ class CrowdAgent(Agent):
         self.current_goal = None
 
         self.knowledge_of_disaster = False
-        self.knowledge_of_environment = True
+        self.knowledge_of_environment = []
         self.at_goal_timer = 1
 
     def step(self):
         """
         Performs a step in the agent's behavior.
         """
+        # Update the agent's knowledge of the environment
+        for goal in self.model.goals:
+            if goal['location'] not in self.knowledge_of_environment:
+                if np.linalg.norm(np.array(self.pos) - np.array(goal['location'])) < goal['radius']:
+                    self.knowledge_of_environment.append(goal['location'])
+
         # Update the agent's knowledge of the disaster
         for fire in self.model.fire:
             if np.linalg.norm(np.array(self.pos) - np.array(fire.pos)) < self.model.fire_radius:
@@ -60,7 +66,18 @@ class CrowdAgent(Agent):
 
         else:
             if self.knowledge_of_environment:
-                self.current_goal = self.model.goals[0]  # Set a default goal
+                goals_of_agents = self.knowledge_of_environment
+
+                # Calculate the distances
+                distances = np.linalg.norm(np.array(goals_of_agents) - np.array(self.pos), axis=1)
+
+                # Find the index of the minimum distance
+                min_index = np.argmin(distances)
+
+                # Get the coordinates that are closest to your coordinates
+                closest_coords = goals_of_agents[min_index]
+                    
+                self.current_goal = closest_coords 
                 self.move_towards_goal()
             else:
                 # random exploration
@@ -75,13 +92,13 @@ class CrowdAgent(Agent):
 
         # Own position and goal position
         x, y = self.pos
-        goal_x, goal_y = self.current_goal["location"]
+        goal_x, goal_y = self.current_goal
 
         # Calculate the distance to the goal for all neighboring cells
         neighbors = self.model.grid.get_neighborhood(self.pos, moore=True, include_center=False)
         valid_neighbors = [(nx, ny) for nx, ny in neighbors if 0 <= nx < self.model.grid.width and 0 <= ny < self.model.grid.height]
-        distances = [(neighbor, np.linalg.norm(np.array(neighbor) - np.array(self.current_goal["location"])))
-                     for neighbor in valid_neighbors if self.model.grid.is_cell_empty(neighbor) or neighbor == self.current_goal["location"]]
+        distances = [(neighbor, np.linalg.norm(np.array(neighbor) - np.array(self.current_goal)))
+                     for neighbor in valid_neighbors if self.model.grid.is_cell_empty(neighbor) or neighbor == self.current_goal]
         
         # Move to the neighboring cell that is closest to the goal and empty
         if distances:
@@ -89,7 +106,7 @@ class CrowdAgent(Agent):
             self.model.grid.move_agent(self, next_move)
 
         # Check if the agent has reached the goal or adjacent cell, and remove it from the model if it has
-        if self.pos == self.current_goal["location"]:
+        if self.pos == self.current_goal:
             if self.at_goal_timer == 0:
                 print(f"Agent {self.unique_id} reached the goal!")
                 self.model.grid.remove_agent(self)
@@ -208,11 +225,11 @@ class CrowdModel(Model):
         self.datacollector.collect(self)
         self.schedule.step()
         
-        # Check if all CrowdAgents have reached their goals
-        all_agents_reached_goal = all(agent.current_goal is None for agent in self.schedule.agents if isinstance(agent, CrowdAgent))
-        if all_agents_reached_goal:
-            self.running = False
-            print(f"Number of steps: {self.schedule.steps}")
+        # Check if all CrowdAgents have reached their goals  # CURRENT GOAL IS NOW ONLY COORDS (NOT A DICT)
+        # all_agents_reached_goal = all(agent.current_goal is None for agent in self.schedule.agents if isinstance(agent, CrowdAgent))
+        # if all_agents_reached_goal:
+        #     self.running = False
+        #     print(f"Number of steps: {self.schedule.steps}")
 
 class Hazard(Agent):
     def __init__(self, unique_id, model):
@@ -234,13 +251,22 @@ def portrayal(agent):
     """
     if isinstance(agent, CrowdAgent):
         if agent.knowledge_of_disaster:
-            portrayal = {
-                "Shape": "circle",
-                "Filled": "true",
-                "r": 0.5,
-                "Color": "green",
-                "Layer": 0
-            }
+            if agent.knowledge_of_environment:
+                portrayal = {
+                    "Shape": "circle",
+                    "Filled": "true",
+                    "r": 0.5,
+                    "Color": "green",
+                    "Layer": 0
+                }
+            else:
+                portrayal = {
+                    "Shape": "circle",
+                    "Filled": "true",
+                    "r": 0.5,
+                    "Color": "yellow",
+                    "Layer": 0
+                }
         else:
             portrayal = {
                 "Shape": "circle",
@@ -282,13 +308,13 @@ fire_locations = [[0,0], [0,1], [0,2]]
 social_radius = 3
 p_spreading = 0.2
 exits = [ {"location": (0, height - 1), "radius": 10},
-          {"location": (width - 1, 0), "radius": 2},
-          {"location": (width - 1, height - 1), "radius": 2}]
+          {"location": (width - 1, 0), "radius": 10},
+          {"location": (width - 1, height - 1), "radius": 10}]
 grid = CanvasGrid(portrayal, 20, 20, 500, 500)
 
 # server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": 20, "height": 20, "N": 100, "goal_radius": 10, "fire_radius": 10, "fire_locations": [[0,0], [0,1], [0,2]], 'social_radius': 3, 'p_spreading': 0.5})
 server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "goal_radius": goal_radius, "fire_radius": fire_radius, "fire_locations": fire_locations, 'social_radius': social_radius, 'p_spreading': p_spreading, 'exits': exits})
-server.port = 9998
+server.port = 9997
 server.launch()
 
 data = server.model.datacollector.get_model_vars_dataframe()
