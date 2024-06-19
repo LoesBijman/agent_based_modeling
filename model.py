@@ -68,7 +68,25 @@ class CrowdAgent(Agent):
             self.stand_still()
 
         else:
-            if self.knowledge_of_environment:
+            # check if neigbor is fire
+            fire = self.check_fire(self.pos)
+            if fire:
+                # move away from fire to oposite direction
+                x, y = self.pos
+                x_fire, y_fire = fire
+                if x_fire > x:
+                    x -= 1
+                elif x_fire < x:
+                    x += 1
+                if y_fire > y:
+                    y -= 1
+                elif y_fire < y:
+                    y += 1
+                
+                # Ensure the new position is within grid bounds and empty
+                if 0 <= x < self.model.grid.width and 0 <= y < self.model.grid.height and self.model.grid.is_cell_empty((x, y)):
+                    self.model.grid.move_agent(self, (x, y))   
+            elif self.knowledge_of_environment:
                 goals_of_agents = self.knowledge_of_environment
 
                 # Calculate the distances
@@ -85,7 +103,13 @@ class CrowdAgent(Agent):
             else:
                 # random exploration
                 self.random_movement()
-                
+    
+    def check_fire(self, pos):
+        for fire in self.model.fire:
+            if np.linalg.norm(np.array(pos) - np.array(fire.pos)) <= 1:
+                return fire.pos
+        return False
+                        
     def spread_knowledge(self):
         if self.random.random() < self.model.p_spreading_environment:
             neighbors = self.model.grid.get_neighbors(self.pos, moore=True, radius=self.model.social_radius)
@@ -112,7 +136,7 @@ class CrowdAgent(Agent):
         distances = [(neighbor, np.linalg.norm(np.array(neighbor) - np.array(self.current_goal)))
                      for neighbor in valid_neighbors if self.model.grid.is_cell_empty(neighbor) or neighbor == self.current_goal]
         
-        # Move to the neighboring cell that is closest to the goal and empty
+        # Move to the neighboring cell that is closest to the goal and empty    
         if distances:
             counter = 0
             # check if next move is towards the fire
@@ -124,7 +148,6 @@ class CrowdAgent(Agent):
                     if np.linalg.norm(np.array(next_move) - np.array(fire.pos)) <= 1:
                         near_fire = True
                 counter += 1
-            
             self.model.grid.move_agent(self, next_move)
 
         # Check if the agent has reached the goal or adjacent cell, and remove it from the model if it has
@@ -137,11 +160,11 @@ class CrowdAgent(Agent):
                 self.at_goal_timer -= 1
 
 
-        # If all agents have reached the goal, stop the model
-        if len(self.model.schedule.agents) == 0:
-            self.model.running = False
-            # print the number of steps it took for all agents to reach the goal
-            print(f"Number of steps: {self.model.schedule.steps}")
+        # # If all agents have reached the goal, stop the model
+        # if len(self.model.schedule.agents) == 0:
+        #     self.model.running = False
+        #     # print the number of steps it took for all agents to reach the goal
+        #     print(f"Number of steps: {self.model.schedule.steps}")
 
     def stand_still(self):
         """
@@ -256,10 +279,12 @@ class CrowdModel(Model):
         self.schedule.step()
         
         # Check if all CrowdAgents have reached their goals  # CURRENT GOAL IS NOW ONLY COORDS (NOT A DICT)
-        # all_agents_reached_goal = all(agent.current_goal is None for agent in self.schedule.agents if isinstance(agent, CrowdAgent))
-        # if all_agents_reached_goal:
-        #     self.running = False
-        #     print(f"Number of steps: {self.schedule.steps}")
+        all_agents_reached_goal = all(agent.current_goal is None for agent in self.schedule.agents if isinstance(agent, CrowdAgent))
+        for agent in self.schedule.agents:
+            if isinstance(agent, CrowdAgent):
+            
+            self.running = False
+            print(f"Number of steps: {self.schedule.steps}")
 
 class Hazard(Agent):
     def __init__(self, unique_id, model):
