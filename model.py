@@ -116,11 +116,12 @@ class CrowdAgent(Agent):
         if distances:
             counter = 0
             # check if next move is towards the fire
+            near_fire = True
             while near_fire:
                 near_fire = False
                 next_move = min(distances, key=lambda t: t[1])[counter]
                 for fire in self.model.fire:
-                    if np.linalg.norm(np.array(next_move) - np.array(fire.pos)) < 1:
+                    if np.linalg.norm(np.array(next_move) - np.array(fire.pos)) <= 1:
                         near_fire = True
                 counter += 1
             
@@ -153,13 +154,13 @@ class CrowdAgent(Agent):
         The agent moves randomly.
         """
         possible_steps = self.model.grid.get_neighborhood(self.pos, moore=True, include_center=False)
-        
+        print(possible_steps)
         for step in possible_steps:
             for fire in self.model.fire:
-                if np.linalg.norm(np.array(step) - np.array(fire.pos)) < 1:
-                    possible_steps.remove(step)
+                if np.linalg.norm(np.array(step) - np.array(fire.pos)) <= 1:
+                    possible_steps = tuple([x for x in possible_steps if x != step])
                     break
-                 
+        print('length pos steps', len(possible_steps))
         new_position = self.random.choice(possible_steps)
         if self.model.grid.is_cell_empty(new_position):
             self.model.grid.move_agent(self, new_position)
@@ -344,7 +345,7 @@ grid = CanvasGrid(portrayal, 20, 20, 500, 500)
 
 # server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": 20, "height": 20, "N": 100, "goal_radius": 10, "fire_radius": 10, "fire_locations": [[0,0], [0,1], [0,2]], 'social_radius': 3, 'p_spreading': 0.5})
 server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "goal_radius": goal_radius, "fire_radius": fire_radius, "fire_locations": fire_locations, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'exits': exits})
-server.port = 9990
+server.port = 9992
 server.launch()
 
 data = server.model.datacollector.get_model_vars_dataframe()
