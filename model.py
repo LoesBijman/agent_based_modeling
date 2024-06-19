@@ -137,18 +137,25 @@ class CrowdAgent(Agent):
         
         # Move to the neighboring cell that is closest to the goal and empty    
         if distances:
-            counter = 0
-            # check if next move is towards the fire
             near_fire = True
-            while near_fire:
+            while near_fire and distances:
+                # Get the neighbor closest to the goal
+                next_move, _ = min(distances, key=lambda t: t[1])
+                
                 near_fire = False
-                next_move = min(distances, key=lambda t: t[1])[counter]
                 for fire in self.model.fire:
                     if np.linalg.norm(np.array(next_move) - np.array(fire.pos)) <= 1:
                         near_fire = True
-                counter += 1
-            self.model.grid.move_agent(self, next_move)
+                        break
+                
+                # If the chosen move is near fire, remove it from the distances list
+                if near_fire:
+                    distances = [d for d in distances if d[0] != next_move]
 
+            # Only move if we found a valid next move not near fire
+            if not near_fire:
+                self.model.grid.move_agent(self, next_move)
+        
         # Check if the agent has reached the goal or adjacent cell, and remove it from the model if it has
         if self.pos == self.current_goal:
             print(f"Agent {self.unique_id} reached the goal!")
@@ -201,10 +208,13 @@ class CrowdModel(Model):
             N (int): The number of agents in the model.
         """
 
-        assert len(fire_locations) < ((width * height) - N) / 2, 'Too many fire locations for amount of agents'
+        # assert len(fire_locations) < ((width * height) - N) / 2, 'Too many fire locations for amount of agents'
+        assert fire_locations < ((width * height) - N) / 2, 'Too many fire locations for the number of agents'
+
 
         self.N = N
-        self.num_agents = N - len(fire_locations) - len(exits)
+        # self.num_agents = N - len(fire_locations) - len(exits)
+        self.num_agents = N - fire_locations - len(exits)
         self.grid = MultiGrid(width, height, False)
         self.schedule = RandomActivation(self)
         self.fire_radius = fire_radius
@@ -233,21 +243,39 @@ class CrowdModel(Model):
             self.grid.place_agent(goal, (x,y))
 
 
-        # Create a fire
-        for i, fire_loc in enumerate(fire_locations):
-            x, y = fire_loc
+        # # Create a fire
+        # for i, fire_loc in enumerate(fire_locations):
+        #     x, y = fire_loc
+        #     fire = Hazard(i, self)
+        #     self.schedule.add(fire)
+        #     self.grid.place_agent(fire, (x,y))
+
+        # # retrieve the fire locations
+        # self.fire = [agent for agent in self.schedule.agents if isinstance(agent, Hazard)]
+        
+        # Create a single fire cluster occupying 4 contiguous cells
+        self.fire = []
+        fire_cluster_center = (self.random.randint(1, width - 2), self.random.randint(1, height - 2))
+
+        # Relative positions to form a 2x2 block
+        relative_positions = [(0, 0), (1, 0), (0, 1), (1, 1)]
+
+        # Calculate actual positions based on the central point
+        fire_positions = [(fire_cluster_center[0] + dx, fire_cluster_center[1] + dy) for dx, dy in relative_positions]
+
+        # Create a single Hazard agent for each cell in the cluster
+        for i, pos in enumerate(fire_positions):
             fire = Hazard(i, self)
             self.schedule.add(fire)
-            self.grid.place_agent(fire, (x,y))
-
-        # retrieve the fire locations
-        self.fire = [agent for agent in self.schedule.agents if isinstance(agent, Hazard)]
-
+            self.grid.place_agent(fire, pos)
+            self.fire.append(fire)
+            
         # Create agents and place them in the model
         for i in range(self.num_agents):
             x = self.random.randint(0, width - 1)
             y = self.random.randint(0, height - 1)
-            while (x,y) in fire_locations:
+            # while (x,y) in fire_locations:
+            while (x,y) in self.fire:
                 x = self.random.randint(0, width - 1)
                 y = self.random.randint(0, height - 1)
 
@@ -263,17 +291,6 @@ class CrowdModel(Model):
         self.num_agents_removed = self.num_agents - sum(1 for agent in self.schedule.agents if isinstance(agent, CrowdAgent))
         self.datacollector.collect(self)
         self.schedule.step()
-        
-        # Check if all CrowdAgents have reached their goals  # CURRENT GOAL IS NOW ONLY COORDS (NOT A DICT)
-        # all_agents_reached_goal = all(agent.current_goal is None for agent in self.schedule.agents if isinstance(agent, CrowdAgent))
-        # stopping = True
-        # for agent in self.schedule.agents:
-        #     if isinstance(agent, CrowdAgent):
-        #         stopping = False
-                  
-        # if stopping:
-        #     self.running = False
-        #     print(f"Number of steps: {self.schedule.steps}")
         
         if self.num_agents_removed == self.num_agents:
             self.running = False
@@ -352,7 +369,8 @@ height = 25
 
 N = int(0.25 * width * height)
 fire_radius = width // 3
-fire_locations = [[0,0], [0,1], [0,2]]
+# fire_locations = [[0,0], [0,1], [0,2]]
+fire_locations = 3
 social_radius = width // 10
 p_spreading = 0.2
 p_spreading_environment = 0.3
@@ -363,7 +381,7 @@ exits = [ {"location": (0, height - 1), "radius": width // 2},
 grid = CanvasGrid(portrayal, width, height)
 
 server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "fire_radius": fire_radius, "fire_locations": fire_locations, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'exits': exits})
-server.port = 9992
+server.port = 9982
 server.launch()
 
 data = server.model.datacollector.get_model_vars_dataframe()
