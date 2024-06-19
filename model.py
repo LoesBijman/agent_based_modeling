@@ -35,7 +35,6 @@ class CrowdAgent(Agent):
 
         self.knowledge_of_disaster = False
         self.knowledge_of_environment = []
-        self.at_goal_timer = 1
 
     def step(self):
         """
@@ -152,12 +151,9 @@ class CrowdAgent(Agent):
 
         # Check if the agent has reached the goal or adjacent cell, and remove it from the model if it has
         if self.pos == self.current_goal:
-            if self.at_goal_timer == 0:
-                print(f"Agent {self.unique_id} reached the goal!")
-                self.model.grid.remove_agent(self)
-                self.model.schedule.remove(self)
-            elif self.at_goal_timer == 1:
-                self.at_goal_timer -= 1
+            print(f"Agent {self.unique_id} reached the goal!")
+            self.model.grid.remove_agent(self)
+            self.model.schedule.remove(self)
 
     def stand_still(self):
         """
@@ -170,13 +166,11 @@ class CrowdAgent(Agent):
         The agent moves randomly.
         """
         possible_steps = self.model.grid.get_neighborhood(self.pos, moore=True, include_center=False)
-        print(possible_steps)
         for step in possible_steps:
             for fire in self.model.fire:
                 if np.linalg.norm(np.array(step) - np.array(fire.pos)) <= 1:
                     possible_steps = tuple([x for x in possible_steps if x != step])
                     break
-        print('length pos steps', len(possible_steps))
         new_position = self.random.choice(possible_steps)
         if self.model.grid.is_cell_empty(new_position):
             self.model.grid.move_agent(self, new_position)
@@ -197,7 +191,7 @@ class CrowdModel(Model):
         step(self): Advances the model by one step.
     """
 
-    def __init__(self, width, height, N, goal_radius, fire_radius, fire_locations, social_radius, p_spreading, p_spreading_environment, exits):
+    def __init__(self, width, height, N, fire_radius, fire_locations, social_radius, p_spreading, p_spreading_environment, exits):
         """
         Initializes a CrowdModel object.
 
@@ -205,7 +199,6 @@ class CrowdModel(Model):
             width (int): The width of the model's grid.
             height (int): The height of the model's grid.
             N (int): The number of agents in the model.
-            goal_radius (float): The radius of the goal area.
         """
 
         assert len(fire_locations) < ((width * height) - N) / 2, 'Too many fire locations for amount of agents'
@@ -214,7 +207,6 @@ class CrowdModel(Model):
         self.num_agents = N - len(fire_locations) - len(exits)
         self.grid = MultiGrid(width, height, False)
         self.schedule = RandomActivation(self)
-        self.goal_radius = goal_radius
         self.fire_radius = fire_radius
         self.social_radius = social_radius
         self.p_spreading = p_spreading
@@ -355,23 +347,22 @@ def portrayal(agent):
 
 # Init stuff
 
-# Goals
-width = 20
-height = 20
-N = 100
-goal_radius = 10
-fire_radius = 10
+width = 25
+height = 25
+
+N = int(0.25 * width * height)
+fire_radius = width // 3
 fire_locations = [[0,0], [0,1], [0,2]]
-social_radius = 3
+social_radius = width // 10
 p_spreading = 0.2
 p_spreading_environment = 0.3
-exits = [ {"location": (0, height - 1), "radius": 10},
-          {"location": (width - 1, 0), "radius": 10},
-          {"location": (width - 1, height - 1), "radius": 10}]
-grid = CanvasGrid(portrayal, 20, 20, 500, 500)
 
-# server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": 20, "height": 20, "N": 100, "goal_radius": 10, "fire_radius": 10, "fire_locations": [[0,0], [0,1], [0,2]], 'social_radius': 3, 'p_spreading': 0.5})
-server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "goal_radius": goal_radius, "fire_radius": fire_radius, "fire_locations": fire_locations, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'exits': exits})
+exits = [ {"location": (0, height - 1), "radius": width // 2},
+          {"location": (width - 1, 0), "radius": width // 2},
+          {"location": (width - 1, height - 1), "radius": width // 2}]
+grid = CanvasGrid(portrayal, width, height)
+
+server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "fire_radius": fire_radius, "fire_locations": fire_locations, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'exits': exits})
 server.port = 9992
 server.launch()
 
