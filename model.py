@@ -253,22 +253,15 @@ class CrowdModel(Model):
         # # retrieve the fire locations
         # self.fire = [agent for agent in self.schedule.agents if isinstance(agent, Hazard)]
         
-        # Create a single fire cluster occupying 4 contiguous cells
-        self.fire = []
-        fire_cluster_center = (self.random.randint(1, width - 2), self.random.randint(1, height - 2))
+        # Create a fire
+        x = int(np.round(np.random.uniform(2, width - 3)))
+        y = int(np.round(np.random.uniform(2, height - 3)))
+        fire = Hazard(i, self)
+        self.schedule.add(fire)
+        self.grid.place_agent(fire, (x,y))
 
-        # Relative positions to form a 2x2 block
-        relative_positions = [(0, 0), (1, 0), (0, 1), (1, 1)]
-
-        # Calculate actual positions based on the central point
-        fire_positions = [(fire_cluster_center[0] + dx, fire_cluster_center[1] + dy) for dx, dy in relative_positions]
-
-        # Create a single Hazard agent for each cell in the cluster
-        for i, pos in enumerate(fire_positions):
-            fire = Hazard(i, self)
-            self.schedule.add(fire)
-            self.grid.place_agent(fire, pos)
-            self.fire.append(fire)
+        # retrieve the fire locations
+        self.fire = [agent for agent in self.schedule.agents if isinstance(agent, Hazard)]
             
         # Create agents and place them in the model
         for i in range(self.num_agents):
@@ -288,14 +281,17 @@ class CrowdModel(Model):
         Advances the model by one step.
         """
         # Collect data on the number of CrowdAgents removed
-        self.num_agents_removed = self.num_agents - sum(1 for agent in self.schedule.agents if isinstance(agent, CrowdAgent))
-        self.datacollector.collect(self)
-        self.schedule.step()
-        
-        if self.num_agents_removed == self.num_agents:
-            self.running = False
-            # print the number of steps it took for all agents to reach the goal
-            print(f"Number of steps: {self.schedule.steps}")
+        while self.schedule.steps < 500:
+            self.num_agents_removed = self.num_agents - sum(1 for agent in self.schedule.agents if isinstance(agent, CrowdAgent))
+            self.datacollector.collect(self)
+            self.schedule.step()
+            
+            if self.num_agents_removed == self.num_agents:
+                self.running = False
+                # print the number of steps it took for all agents to reach the goal
+                print(f"Number of steps: {self.schedule.steps}")
+        self.running = False
+        print(f"Number of steps: {self.schedule.steps}")
 
 class Hazard(Agent):
     def __init__(self, unique_id, model):
@@ -381,7 +377,7 @@ exits = [ {"location": (0, height - 1), "radius": width // 2},
 grid = CanvasGrid(portrayal, width, height)
 
 server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "fire_radius": fire_radius, "fire_locations": fire_locations, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'exits': exits})
-server.port = 9982
+server.port = 9984
 server.launch()
 
 data = server.model.datacollector.get_model_vars_dataframe()
