@@ -18,9 +18,9 @@ import numpy as np
 parameter_bounds = {
     "social_radius": range(2, 6),  # Vary social radius from 2 to 5
     "fire_radius": range(5, 11, 2),  # Vary fire radius from 5 to 10
-    "exit_radius": [5, 10, 15],  # Vary exit radius from 5 to 15
-    "p_spreading": np.arange(0.1, 0.6, 0.2),  # Vary spreading probability from 0.1 to 0.5
-    "p_spreading_environment": np.arange(0.1, 0.6, 0.2)  # Vary environment knowledge spreading probability from 0.1 to 0.5
+    "exit_radius": [5, 10, 15, 20],  # Vary exit radius from 5 to 15
+    "p_spreading": np.arange(0, 1, 0.2),  # Vary spreading probability from 0.1 to 0.5
+    "p_spreading_environment": np.arange(0, 1, 0.2)  # Vary environment knowledge spreading probability from 0.1 to 0.5
 }
 
 # Define fixed parameters
