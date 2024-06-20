@@ -281,17 +281,19 @@ class CrowdModel(Model):
         Advances the model by one step.
         """
         # Collect data on the number of CrowdAgents removed
-        while self.schedule.steps < 500:
-            self.num_agents_removed = self.num_agents - sum(1 for agent in self.schedule.agents if isinstance(agent, CrowdAgent))
-            self.datacollector.collect(self)
-            self.schedule.step()
+        
+        self.num_agents_removed = self.num_agents - sum(1 for agent in self.schedule.agents if isinstance(agent, CrowdAgent))
+        self.datacollector.collect(self)
+        self.schedule.step()
+        
+        if self.num_agents_removed == self.num_agents:
+            self.running = False
+            # print the number of steps it took for all agents to reach the goal
+            print(f"Number of steps: {self.schedule.steps}")
             
-            if self.num_agents_removed == self.num_agents:
-                self.running = False
-                # print the number of steps it took for all agents to reach the goal
-                print(f"Number of steps: {self.schedule.steps}")
-        self.running = False
-        print(f"Number of steps: {self.schedule.steps}")
+        if self.schedule.steps == 500:
+            self.running = False
+            print(f"Number of steps: {self.schedule.steps}")
 
 class Hazard(Agent):
     def __init__(self, unique_id, model):
