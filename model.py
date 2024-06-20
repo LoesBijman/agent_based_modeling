@@ -291,8 +291,9 @@ class CrowdModel(Model):
             # print the number of steps it took for all agents to reach the goal
             print(f"Number of steps: {self.schedule.steps}")
             
-        if self.schedule.steps == 500:
+        if self.schedule.steps == 700:
             self.running = False
+            print(f"Evacuation failed... Number of people left: {self.num_agents-self.num_agents_removed}")
             print(f"Number of steps: {self.schedule.steps}")
 
 class Hazard(Agent):
