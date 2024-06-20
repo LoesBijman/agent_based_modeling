@@ -382,13 +382,13 @@ width = 25
 height = 25
 
 N = int(0.25 * width * height)
-fire_radius = width // 3
+fire_radius = 10
 # fire_locations = [[0,0], [0,1], [0,2]]
 fire_locations = 3
 social_radius = width // 10
 p_spreading = 0.2
 p_spreading_environment = 0.3
-p_env_knowledge_params = [0, 1, 0.3, 0.8] #gumbel distribution mean, spread, threshold 1, threshold 2
+p_env_knowledge_params = [0, 1, -1, 1] #gumbel distribution mean, spread, threshold 1, threshold 2
 
 exits = [ {"location": (0, height - 1), "radius": width // 2},
           {"location": (width - 1, 0), "radius": width // 2},
