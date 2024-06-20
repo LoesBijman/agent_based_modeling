@@ -373,24 +373,24 @@ def portrayal(agent):
 
 # # Init stuff
 
-width = 25
-height = 25
+# width = 25
+# height = 25
 
-N = int(0.25 * width * height)
-fire_radius = 10
-social_radius = width // 10
-p_spreading = 0.2
-p_spreading_environment = 0.3
-p_env_knowledge_params = [0, 1, -1, 1] #gumbel distribution mean, spread, threshold 1, threshold 2
+# N = int(0.25 * width * height)
+# fire_radius = 10
+# social_radius = width // 10
+# p_spreading = 0.2
+# p_spreading_environment = 0.3
+# p_env_knowledge_params = [0, 1, -1, 1] #gumbel distribution mean, spread, threshold 1, threshold 2
 
-exits = [ {"location": (0, height - 1), "radius": width // 2},
-          {"location": (width - 1, 0), "radius": width // 2},
-          {"location": (width - 1, height - 1), "radius": width // 2}]
-grid = CanvasGrid(portrayal, width, height)
+# exits = [ {"location": (0, height - 1), "radius": width // 2},
+#           {"location": (width - 1, 0), "radius": width // 2},
+#           {"location": (width - 1, height - 1), "radius": width // 2}]
+# grid = CanvasGrid(portrayal, width, height)
 
-server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "fire_radius": fire_radius, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'p_env_knowledge_params': p_env_knowledge_params, 'exits': exits})
-server.port = 9984
-server.launch()
+# server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "fire_radius": fire_radius, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'p_env_knowledge_params': p_env_knowledge_params, 'exits': exits})
+# server.port = 9984
+# server.launch()
 
 # data = server.model.datacollector.get_model_vars_dataframe()
 # data.to_csv("agents_removed_per_step.csv", index=False)
