@@ -5,7 +5,6 @@ from mesa.visualization.modules import CanvasGrid
 from mesa.datacollection import DataCollector
 from mesa.visualization.ModularVisualization import ModularServer
 import numpy as np
-from scipy.stats import gumbel_r
 
 
 class CrowdAgent(Agent):
@@ -26,35 +25,15 @@ class CrowdAgent(Agent):
     def __init__(self, unique_id, model):
         super().__init__(unique_id, model)
 
-        # Define the goals that the agent can move towards
-        # self.goals = [
-        #     {"location": (0, model.grid.height - 1), "priority": 1},
-        #     {"location": (model.grid.width - 1, 0), "priority": 2},
-        #     {"location": (model.grid.width - 1, model.grid.height - 1), "priority": 2}
-        # ]
         self.current_goal = None
-        self.model.goals
 
         self.knowledge_of_disaster = False
-
-        #set environment knowledge stochastically
-        env_knowledge_chance = gumbel_r.rvs(loc = self.model.p_env_knowledge_params[0], scale = self.model.p_env_knowledge_params[1], size = 1)
         self.knowledge_of_environment = []
-
-        if env_knowledge_chance < self.model.p_env_knowledge_params[2]:
-            pass
-        elif env_knowledge_chance < self.model.p_env_knowledge_params[3]:
-            self.knowledge_of_environment = [self.model.goals[0]['location']]
-        else:
-            for goal_dict in self.model.goals:
-                self.knowledge_of_environment.append(goal_dict['location'])
-
 
     def step(self):
         """
         Performs a step in the agent's behavior.
         """
-        
         # Update the agent's knowledge of the environment
         for goal in self.model.goals:
             if goal['location'] not in self.knowledge_of_environment:
@@ -68,9 +47,10 @@ class CrowdAgent(Agent):
         for fire in self.model.fire:
             if np.linalg.norm(np.array(self.pos) - np.array(fire.pos)) < self.model.fire_radius:
                 # spread knowledge stochastically
-                u = np.random.uniform(0,1)
-                if u < self.model.p_spreading:
-                    self.knowledge_of_disaster = True
+                # u = np.random.uniform(0,1)
+                # if u < self.model.p_spreading:
+                self.knowledge_of_disaster = True
+                self.model.num_agents_know_fire += 1 # Count
         
         disaster_knowing_agents = [agent for agent in self.model.schedule.agents if isinstance(agent, CrowdAgent) and agent.knowledge_of_disaster]
 
@@ -78,7 +58,11 @@ class CrowdAgent(Agent):
         if not self.knowledge_of_disaster:
             for dis_agent in disaster_knowing_agents:
                 if np.linalg.norm(np.array(self.pos) - np.array(dis_agent.pos)) < self.model.social_radius:
-                    self.knowledge_of_disaster = True
+                    # spread knowledge stochastically
+                    u = np.random.uniform(0,1)
+                    if u < self.model.p_spreading:
+                        self.knowledge_of_disaster = True
+                        self.model.num_agents_know_fire += 1 # Count
             self.stand_still()
 
         else:
@@ -111,6 +95,9 @@ class CrowdAgent(Agent):
 
                 # Get the coordinates that are closest to your coordinates
                 closest_coords = goals_of_agents[min_index]
+
+                if self.current_goal != closest_coords:
+                    self.model.change_goal += 1 # Count
                     
                 self.current_goal = closest_coords 
                 self.move_towards_goal()
@@ -132,6 +119,7 @@ class CrowdAgent(Agent):
                     if neighbor.current_goal:
                         if neighbor.current_goal not in self.knowledge_of_environment:
                             self.knowledge_of_environment.append(neighbor.current_goal)
+                            self.model.exit_knowledge_spread += 1 # Count
                     
     def move_towards_goal(self):
         """
@@ -213,7 +201,7 @@ class CrowdModel(Model):
         step(self): Advances the model by one step.
     """
 
-    def __init__(self, width, height, N, fire_radius, fire_locations, social_radius, p_spreading, p_spreading_environment, p_env_knowledge_params, exits):
+    def __init__(self, width, height, N, fire_radius, fire_locations, social_radius, p_spreading, p_spreading_environment, exits):
         """
         Initializes a CrowdModel object.
 
@@ -223,9 +211,7 @@ class CrowdModel(Model):
             N (int): The number of agents in the model.
         """
 
-        # assert len(fire_locations) < ((width * height) - N) / 2, 'Too many fire locations for amount of agents'
         assert fire_locations < ((width * height) - N) / 2, 'Too many fire locations for the number of agents'
-
 
         self.N = N
         # self.num_agents = N - len(fire_locations) - len(exits)
@@ -236,37 +222,26 @@ class CrowdModel(Model):
         self.social_radius = social_radius
         self.p_spreading = p_spreading
         self.p_spreading_environment = p_spreading_environment
-        self.p_env_knowledge_params = p_env_knowledge_params
+        self.goals = exits
+        
         self.running = True  # Initialize the running state
 
+        # Save data
         self.datacollector = DataCollector(
-            {"Agents Removed": lambda m: m.num_agents_removed}
-        )
-        self.num_agents_removed = 0  # Track the number of agents removed
-
-        # self.goals = [
-        #     {"location": (0, model.grid.height - 1), "radius": 1},
-        #     {"location": (model.grid.width - 1, 0), "radius": 2},
-        #     {"location": (model.grid.width - 1, model.grid.height - 1), "radius": 2}
-        # ]
-        self.goals = exits
+            {"Agents Removed": lambda m: m.num_agents_removed, 
+             "Agents Know Fire": lambda m: m.num_agents_know_fire,
+             "Exit Knowledge Spread": lambda m: m.exit_knowledge_spread,
+             "Change Goal": lambda m: m.change_goal})
+        self.num_agents_removed = 0  # Number of agents removed
+        self.num_agents_know_fire = 0 # Number of agents that know about the fire
+        self.exit_knowledge_spread = 0 # Number of times agent tells another agent about a new exit
+        self.change_goal = 0 # Number of times someone changes direction to a closer goal
 
         for i, exit in enumerate(exits):
             x, y = exit["location"]
             goal = Goal(i, self)
             self.schedule.add(goal)
             self.grid.place_agent(goal, (x,y))
-
-
-        # # Create a fire
-        # for i, fire_loc in enumerate(fire_locations):
-        #     x, y = fire_loc
-        #     fire = Hazard(i, self)
-        #     self.schedule.add(fire)
-        #     self.grid.place_agent(fire, (x,y))
-
-        # # retrieve the fire locations
-        # self.fire = [agent for agent in self.schedule.agents if isinstance(agent, Hazard)]
         
         # Create a fire
         x = int(np.round(np.random.uniform(2, width - 3)))
@@ -376,30 +351,29 @@ def portrayal(agent):
     return portrayal
 
 
-# # Init stuff
+# Init stuff
 
-# width = 25
-# height = 25
+width = 25
+height = 25
 
 N = int(0.25 * width * height)
-fire_radius = 10
+fire_radius = width // 3
 # fire_locations = [[0,0], [0,1], [0,2]]
 fire_locations = 3
 social_radius = width // 10
 p_spreading = 0.2
 p_spreading_environment = 0.3
-p_env_knowledge_params = [0, 1, -1, 1] #gumbel distribution mean, spread, threshold 1, threshold 2
 
-# exits = [ {"location": (0, height - 1), "radius": width // 2},
-#           {"location": (width - 1, 0), "radius": width // 2},
-#           {"location": (width - 1, height - 1), "radius": width // 2}]
-# grid = CanvasGrid(portrayal, width, height)
+exits = [ {"location": (0, height - 1), "radius": width // 2},
+          {"location": (width - 1, 0), "radius": width // 2},
+          {"location": (width - 1, height - 1), "radius": width // 2}]
+grid = CanvasGrid(portrayal, width, height)
 
-server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "fire_radius": fire_radius, "fire_locations": fire_locations, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'p_env_knowledge_params': p_env_knowledge_params, 'exits': exits})
+server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "fire_radius": fire_radius, "fire_locations": fire_locations, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'exits': exits})
 server.port = 9984
 server.launch()
 
-# data = server.model.datacollector.get_model_vars_dataframe()
-# data.to_csv("agents_removed_per_step.csv", index=False)
+data = server.model.datacollector.get_model_vars_dataframe()
+data.to_csv("agents_removed_per_step.csv", index=False)
 
-# print("Data saved successfully!")
+print("Data saved successfully!")
