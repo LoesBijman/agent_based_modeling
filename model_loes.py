@@ -276,6 +276,9 @@ class CrowdModel(Model):
         # Collect data on the number of CrowdAgents removed
         
         self.num_agents_removed = self.num_agents - sum(1 for agent in self.schedule.agents if isinstance(agent, CrowdAgent))
+        self.num_agents_know_fire = self.num_agents_know_fire
+        self.exit_knowledge_spread = self.exit_knowledge_spread
+        self.change_goal = self.change_goal
         self.datacollector.collect(self)
         self.schedule.step()
         
