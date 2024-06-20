@@ -20,7 +20,7 @@ exits = [ {"location": (0, height - 1), "radius": width // 2},
 
 # Initialize the server with the model
 server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": 20, "height": 20, "N": 100, "fire_radius": 20//3, 'social_radius': 20//4, 'p_spreading': 0.2, 'p_spreading_environment': 0.3, 'p_env_knowledge_params': [0,1,50,51], 'exits': exits})
-server.model = CrowdModel(20, 20, 100, 20//3, 20//4, 0.2, 0.3, exits)  # Reset the model
+server.model = CrowdModel(20, 20, 100, 20//3, 20//4, 0.2, 0.3, [0,1,50,51], exits)  # Reset the model
 server.model.run_model()
 data = server.model.datacollector.get_model_vars_dataframe()
 
@@ -47,7 +47,7 @@ all_data = pd.DataFrame()
 # Run the model multiple times
 # for i in range(num_runs):
 #     print(f"Running model {i + 1}...")
-#     server.model = CrowdModel(20, 20, 100, 20//3, 20//4, 0.2, 0.3, exits)  # Reset the model
+#     server.model = CrowdModel(20, 20, 100, 20//3, 20//4, 0.2, 0.3, [0,1,50,51], exits)  # Reset the model
 #     server.model.run_model()  # Run the model
     
 #     # Get data for the current run
