@@ -361,29 +361,29 @@ def portrayal(agent):
     return portrayal
 
 
-# Init stuff
+# # Init stuff
 
-width = 25
-height = 25
+# width = 25
+# height = 25
 
-N = int(0.25 * width * height)
-fire_radius = width // 3
-# fire_locations = [[0,0], [0,1], [0,2]]
-fire_locations = 3
-social_radius = width // 10
-p_spreading = 0.2
-p_spreading_environment = 0.3
+# N = int(0.25 * width * height)
+# fire_radius = width // 3
+# # fire_locations = [[0,0], [0,1], [0,2]]
+# fire_locations = 3
+# social_radius = width // 10
+# p_spreading = 0.2
+# p_spreading_environment = 0.3
 
-exits = [ {"location": (0, height - 1), "radius": width // 2},
-          {"location": (width - 1, 0), "radius": width // 2},
-          {"location": (width - 1, height - 1), "radius": width // 2}]
-grid = CanvasGrid(portrayal, width, height)
+# exits = [ {"location": (0, height - 1), "radius": width // 2},
+#           {"location": (width - 1, 0), "radius": width // 2},
+#           {"location": (width - 1, height - 1), "radius": width // 2}]
+# grid = CanvasGrid(portrayal, width, height)
 
-server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "fire_radius": fire_radius, "fire_locations": fire_locations, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'exits': exits})
-server.port = 9984
-server.launch()
+# server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "fire_radius": fire_radius, "fire_locations": fire_locations, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'exits': exits})
+# server.port = 9984
+# server.launch()
 
-data = server.model.datacollector.get_model_vars_dataframe()
-data.to_csv("agents_removed_per_step.csv", index=False)
+# data = server.model.datacollector.get_model_vars_dataframe()
+# data.to_csv("agents_removed_per_step.csv", index=False)
 
-print("Data saved successfully!")
+# print("Data saved successfully!")
