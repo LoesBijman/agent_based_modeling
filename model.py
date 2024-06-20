@@ -219,7 +219,7 @@ class CrowdModel(Model):
         step(self): Advances the model by one step.
     """
 
-    def __init__(self, width, height, N, fire_radius, fire_locations, social_radius, p_spreading, p_spreading_environment, p_env_knowledge_params, exits):
+    def __init__(self, width, height, N, fire_radius, social_radius, p_spreading, p_spreading_environment, p_env_knowledge_params, exits):
         """
         Initializes a CrowdModel object.
 
@@ -229,13 +229,8 @@ class CrowdModel(Model):
             N (int): The number of agents in the model.
         """
 
-        # assert len(fire_locations) < ((width * height) - N) / 2, 'Too many fire locations for amount of agents'
-        assert fire_locations < ((width * height) - N) / 2, 'Too many fire locations for the number of agents'
-
-
         self.N = N
-        # self.num_agents = N - len(fire_locations) - len(exits)
-        self.num_agents = N - fire_locations - len(exits)
+        self.num_agents = N - 1 - len(exits)
         self.grid = MultiGrid(width, height, False)
         self.schedule = RandomActivation(self)
         self.fire_radius = fire_radius
@@ -283,7 +278,6 @@ class CrowdModel(Model):
         for i in range(self.num_agents):
             x = self.random.randint(0, width - 1)
             y = self.random.randint(0, height - 1)
-            # while (x,y) in fire_locations:
             while (x,y) in self.fire:
                 x = self.random.randint(0, width - 1)
                 y = self.random.randint(0, height - 1)
@@ -307,9 +301,9 @@ class CrowdModel(Model):
             # print the number of steps it took for all agents to reach the goal
             print(f"Number of steps: {self.schedule.steps}")
             
-        if self.schedule.steps == 700:
+        if all(not agent.knowledge_of_disaster for agent in self.schedule.agents if isinstance(agent, CrowdAgent)):
             self.running = False
-            print(f"Evacuation failed... Number of people left: {self.num_agents-self.num_agents_removed}")
+            print(f"Evacuation failed... Number of people left: {self.num_agents - self.num_agents_removed}")
             print(f"Number of steps: {self.schedule.steps}")
 
 class Hazard(Agent):
@@ -384,7 +378,6 @@ height = 25
 
 N = int(0.25 * width * height)
 fire_radius = 10
-fire_locations = 3
 social_radius = width // 10
 p_spreading = 0.2
 p_spreading_environment = 0.3
@@ -395,7 +388,7 @@ exits = [ {"location": (0, height - 1), "radius": width // 2},
           {"location": (width - 1, height - 1), "radius": width // 2}]
 grid = CanvasGrid(portrayal, width, height)
 
-server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "fire_radius": fire_radius, "fire_locations": fire_locations, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'p_env_knowledge_params': p_env_knowledge_params, 'exits': exits})
+server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "fire_radius": fire_radius, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'p_env_knowledge_params': p_env_knowledge_params, 'exits': exits})
 server.port = 9984
 server.launch()
 
