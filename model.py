@@ -5,6 +5,7 @@ from mesa.visualization.modules import CanvasGrid
 from mesa.datacollection import DataCollector
 from mesa.visualization.ModularVisualization import ModularServer
 import numpy as np
+from scipy.stats import gumbel_r
 
 
 class CrowdAgent(Agent):
@@ -32,14 +33,28 @@ class CrowdAgent(Agent):
         #     {"location": (model.grid.width - 1, model.grid.height - 1), "priority": 2}
         # ]
         self.current_goal = None
+        self.model.goals
 
         self.knowledge_of_disaster = False
+
+        #set environment knowledge stochastically
+        env_knowledge_chance = gumbel_r.rvs(loc = self.model.p_env_knowledge_params[0], scale = self.model.p_env_knowledge_params[1], size = 1)
         self.knowledge_of_environment = []
+
+        if env_knowledge_chance < self.model.p_env_knowledge_params[2]:
+            pass
+        elif env_knowledge_chance < self.model.p_env_knowledge_params[3]:
+            self.knowledge_of_environment = [self.model.goals[0]['location']]
+        else:
+            for goal_dict in self.model.goals:
+                self.knowledge_of_environment.append(goal_dict['location'])
+
 
     def step(self):
         """
         Performs a step in the agent's behavior.
         """
+        
         # Update the agent's knowledge of the environment
         for goal in self.model.goals:
             if goal['location'] not in self.knowledge_of_environment:
@@ -198,7 +213,7 @@ class CrowdModel(Model):
         step(self): Advances the model by one step.
     """
 
-    def __init__(self, width, height, N, fire_radius, fire_locations, social_radius, p_spreading, p_spreading_environment, exits):
+    def __init__(self, width, height, N, fire_radius, fire_locations, social_radius, p_spreading, p_spreading_environment, p_env_knowledge_params, exits):
         """
         Initializes a CrowdModel object.
 
@@ -221,7 +236,7 @@ class CrowdModel(Model):
         self.social_radius = social_radius
         self.p_spreading = p_spreading
         self.p_spreading_environment = p_spreading_environment
-        
+        self.p_env_knowledge_params = p_env_knowledge_params
         self.running = True  # Initialize the running state
 
         self.datacollector = DataCollector(
@@ -373,13 +388,14 @@ fire_locations = 3
 social_radius = width // 10
 p_spreading = 0.2
 p_spreading_environment = 0.3
+p_env_knowledge_params = [0, 1, 0.3, 0.8] #gumbel distribution mean, spread, threshold 1, threshold 2
 
 exits = [ {"location": (0, height - 1), "radius": width // 2},
           {"location": (width - 1, 0), "radius": width // 2},
           {"location": (width - 1, height - 1), "radius": width // 2}]
 grid = CanvasGrid(portrayal, width, height)
 
-server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "fire_radius": fire_radius, "fire_locations": fire_locations, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'exits': exits})
+server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "fire_radius": fire_radius, "fire_locations": fire_locations, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'p_env_knowledge_params': p_env_knowledge_params, 'exits': exits})
 server.port = 9984
 server.launch()
 
