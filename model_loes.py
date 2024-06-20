@@ -49,7 +49,6 @@ class CrowdAgent(Agent):
                 if not self.knowledge_of_disaster:
                     self.knowledge_of_disaster = True
                     self.model.num_agents_know_fire += 1 # Count
-                    # self.model.datacollector.collect(self)
         
         disaster_knowing_agents = [agent for agent in self.model.schedule.agents if isinstance(agent, CrowdAgent) and agent.knowledge_of_disaster]
 
@@ -65,7 +64,6 @@ class CrowdAgent(Agent):
                             self.knowledge_of_disaster = True
                             self.model.num_agents_know_fire += 1 # Count
                             print(self.model.num_agents_know_fire)
-                            # self.model.datacollector.collect(self)
             self.stand_still()
 
         else:
