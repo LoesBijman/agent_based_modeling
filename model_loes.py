@@ -48,6 +48,8 @@ class CrowdAgent(Agent):
             if np.linalg.norm(np.array(self.pos) - np.array(fire.pos)) < self.model.fire_radius:
                 self.knowledge_of_disaster = True
                 self.model.num_agents_know_fire += 1 # Count
+                self.datacollector.collect(self)
+                # print(self.model.num_agents_know_fire)
         
         disaster_knowing_agents = [agent for agent in self.model.schedule.agents if isinstance(agent, CrowdAgent) and agent.knowledge_of_disaster]
 
@@ -61,6 +63,7 @@ class CrowdAgent(Agent):
                     if u < self.model.p_spreading:
                         self.knowledge_of_disaster = True
                         self.model.num_agents_know_fire += 1 # Count
+                        self.datacollector.collect(self)
             self.stand_still()
 
         else:
@@ -96,6 +99,7 @@ class CrowdAgent(Agent):
 
                 if self.current_goal != closest_coords:
                     self.model.change_goal += 1 # Count
+                    self.datacollector.collect(self)
                     
                 self.current_goal = closest_coords 
                 self.move_towards_goal()
@@ -118,6 +122,7 @@ class CrowdAgent(Agent):
                         if neighbor.current_goal not in self.knowledge_of_environment:
                             self.knowledge_of_environment.append(neighbor.current_goal)
                             self.model.exit_knowledge_spread += 1 # Count
+                            self.datacollector.collect(self)
                     
     def move_towards_goal(self):
         """
@@ -199,7 +204,7 @@ class CrowdModel(Model):
         step(self): Advances the model by one step.
     """
 
-    def __init__(self, width, height, N, fire_radius, fire_locations, social_radius, p_spreading, p_spreading_environment, exits):
+    def __init__(self, width, height, N, fire_radius, social_radius, p_spreading, p_spreading_environment, exits):
         """
         Initializes a CrowdModel object.
 
@@ -209,11 +214,9 @@ class CrowdModel(Model):
             N (int): The number of agents in the model.
         """
 
-        assert fire_locations < ((width * height) - N) / 2, 'Too many fire locations for the number of agents'
-
         self.N = N
         # self.num_agents = N - len(fire_locations) - len(exits)
-        self.num_agents = N - fire_locations - len(exits)
+        self.num_agents = N - 1 - len(exits)
         self.grid = MultiGrid(width, height, False)
         self.schedule = RandomActivation(self)
         self.fire_radius = fire_radius
@@ -351,27 +354,25 @@ def portrayal(agent):
 
 # Init stuff
 
-width = 25
-height = 25
+# width = 25
+# height = 25
 
-N = int(0.25 * width * height)
-fire_radius = width // 3
-# fire_locations = [[0,0], [0,1], [0,2]]
-fire_locations = 3
-social_radius = width // 10
-p_spreading = 0.2
-p_spreading_environment = 0.3
+# N = int(0.25 * width * height)
+# fire_radius = width // 3
+# social_radius = width // 10
+# p_spreading = 0.2
+# p_spreading_environment = 0.3
 
-exits = [ {"location": (0, height - 1), "radius": width // 2},
-          {"location": (width - 1, 0), "radius": width // 2},
-          {"location": (width - 1, height - 1), "radius": width // 2}]
-grid = CanvasGrid(portrayal, width, height)
+# exits = [ {"location": (0, height - 1), "radius": width // 2},
+#           {"location": (width - 1, 0), "radius": width // 2},
+#           {"location": (width - 1, height - 1), "radius": width // 2}]
+# grid = CanvasGrid(portrayal, width, height)
 
-server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "fire_radius": fire_radius, "fire_locations": fire_locations, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'exits': exits})
-server.port = 9984
-server.launch()
+# server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "fire_radius": fire_radius, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'exits': exits})
+# server.port = 9984
+# server.launch()
 
-data = server.model.datacollector.get_model_vars_dataframe()
-data.to_csv("agents_removed_per_step.csv", index=False)
+# data = server.model.datacollector.get_model_vars_dataframe()
+# data.to_csv("agents_removed_per_step.csv", index=False)
 
-print("Data saved successfully!")
+# print("Data saved successfully!")
