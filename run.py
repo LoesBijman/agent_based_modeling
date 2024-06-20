@@ -22,7 +22,7 @@ exits = [ {"location": (0, height - 1), "radius": width // 2},
 server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": 20, "height": 20, "N": 100, "fire_radius": 20//3, 'social_radius': 20//4, 'p_spreading': 0.2, 'p_spreading_environment': 0.3, 'exits': exits})
 # server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": 20, "height": 20, "N": 100, "goal_radius": 10, "fire_radius": 10, "fire_locations": [[0,0], [0,1], [0,2]], 'social_radius': 2})
 server.port = 9999
-# server.launch()
+server.launch()
 data = server.model.datacollector.get_model_vars_dataframe()
 data.to_csv("agents_removed_per_step.csv", index=False)
 

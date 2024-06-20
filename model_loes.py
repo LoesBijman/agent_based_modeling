@@ -46,10 +46,10 @@ class CrowdAgent(Agent):
         # Update the agent's knowledge of the disaster based on radius
         for fire in self.model.fire:
             if np.linalg.norm(np.array(self.pos) - np.array(fire.pos)) < self.model.fire_radius:
-                self.knowledge_of_disaster = True
-                self.model.num_agents_know_fire += 1 # Count
-                self.datacollector.collect(self)
-                # print(self.model.num_agents_know_fire)
+                if not self.knowledge_of_disaster:
+                    self.knowledge_of_disaster = True
+                    self.model.num_agents_know_fire += 1 # Count
+                    # self.model.datacollector.collect(self)
         
         disaster_knowing_agents = [agent for agent in self.model.schedule.agents if isinstance(agent, CrowdAgent) and agent.knowledge_of_disaster]
 
@@ -58,12 +58,14 @@ class CrowdAgent(Agent):
             # spread knowledge of disaster
             for dis_agent in disaster_knowing_agents:
                 if np.linalg.norm(np.array(self.pos) - np.array(dis_agent.pos)) < self.model.social_radius:
-                    # spread knowledge stochastically
-                    u = np.random.uniform(0,1)
-                    if u < self.model.p_spreading:
-                        self.knowledge_of_disaster = True
-                        self.model.num_agents_know_fire += 1 # Count
-                        self.datacollector.collect(self)
+                    if not self.knowledge_of_disaster:
+                        # spread knowledge stochastically
+                        u = np.random.uniform(0,1)
+                        if u < self.model.p_spreading:
+                            self.knowledge_of_disaster = True
+                            self.model.num_agents_know_fire += 1 # Count
+                            print(self.model.num_agents_know_fire)
+                            # self.model.datacollector.collect(self)
             self.stand_still()
 
         else:
@@ -99,7 +101,7 @@ class CrowdAgent(Agent):
 
                 if self.current_goal != closest_coords:
                     self.model.change_goal += 1 # Count
-                    self.datacollector.collect(self)
+                    # self.datacollector.collect(self)
                     
                 self.current_goal = closest_coords 
                 self.move_towards_goal()
@@ -122,7 +124,7 @@ class CrowdAgent(Agent):
                         if neighbor.current_goal not in self.knowledge_of_environment:
                             self.knowledge_of_environment.append(neighbor.current_goal)
                             self.model.exit_knowledge_spread += 1 # Count
-                            self.datacollector.collect(self)
+                            # self.model.datacollector.collect(self)
                     
     def move_towards_goal(self):
         """
