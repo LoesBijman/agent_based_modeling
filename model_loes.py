@@ -43,12 +43,9 @@ class CrowdAgent(Agent):
         # Spread knowledge of the environment
         self.spread_knowledge()
         
-        # Update the agent's knowledge of the disaster
+        # Update the agent's knowledge of the disaster based on radius
         for fire in self.model.fire:
             if np.linalg.norm(np.array(self.pos) - np.array(fire.pos)) < self.model.fire_radius:
-                # spread knowledge stochastically
-                # u = np.random.uniform(0,1)
-                # if u < self.model.p_spreading:
                 self.knowledge_of_disaster = True
                 self.model.num_agents_know_fire += 1 # Count
         
@@ -56,6 +53,7 @@ class CrowdAgent(Agent):
 
         # Perform step
         if not self.knowledge_of_disaster:
+            # spread knowledge of disaster
             for dis_agent in disaster_knowing_agents:
                 if np.linalg.norm(np.array(self.pos) - np.array(dis_agent.pos)) < self.model.social_radius:
                     # spread knowledge stochastically
