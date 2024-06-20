@@ -26,12 +26,6 @@ class CrowdAgent(Agent):
     def __init__(self, unique_id, model):
         super().__init__(unique_id, model)
 
-        # Define the goals that the agent can move towards
-        # self.goals = [
-        #     {"location": (0, model.grid.height - 1), "priority": 1},
-        #     {"location": (model.grid.width - 1, 0), "priority": 2},
-        #     {"location": (model.grid.width - 1, model.grid.height - 1), "priority": 2}
-        # ]
         self.current_goal = None
         self.model.goals
 
@@ -105,6 +99,7 @@ class CrowdAgent(Agent):
                 if 0 <= x < self.model.grid.width and 0 <= y < self.model.grid.height and self.model.grid.is_cell_empty((x, y)):
                     self.model.grid.move_agent(self, (x, y))   
             elif self.knowledge_of_environment:
+                prev_goal = self.current_goal
                 goals_of_agents = self.knowledge_of_environment
 
                 # Calculate the distances
@@ -116,7 +111,7 @@ class CrowdAgent(Agent):
                 # Get the coordinates that are closest to your coordinates
                 closest_coords = goals_of_agents[min_index]
 
-                if self.current_goal != closest_coords:
+                if self.current_goal != prev_goal:
                     self.model.change_goal += 1 # Count
                     
                 self.current_goal = closest_coords 
@@ -242,18 +237,13 @@ class CrowdModel(Model):
         self.p_env_knowledge_params = p_env_knowledge_params
         self.running = True  # Initialize the running state
 
-        self.datacollector = DataCollector(
-            {"Agents Removed": lambda m: m.num_agents_removed}
-        )
-        self.num_agents_removed = 0  # Track the number of agents removed
-
         # # Save data
-        # self.datacollector = DataCollector(
-        #     {"Agents Removed": lambda m: m.num_agents_removed, 
-        #      "Agents Know Fire": lambda m: m.num_agents_know_fire,
-        #      "Exit Knowledge Spread": lambda m: m.exit_knowledge_spread,
-        #      "Change Goal": lambda m: m.change_goal})
-        # self.num_agents_removed = 0  # Number of agents removed
+        self.datacollector = DataCollector(
+            {"Agents Removed": lambda m: m.num_agents_removed, 
+             "Agents Know Fire": lambda m: m.num_agents_know_fire,
+             "Exit Knowledge Spread": lambda m: m.exit_knowledge_spread,
+             "Change Goal": lambda m: m.change_goal})
+        self.num_agents_removed = 0  # Number of agents removed
         self.num_agents_know_fire = 0 # Number of agents that know about the fire
         self.exit_knowledge_spread = 0 # Number of times agent tells another agent about a new exit
         self.change_goal = 0 # Number of times someone changes direction to a closer goal
@@ -371,7 +361,6 @@ def portrayal(agent):
             "Layer": 2
         }
     return portrayal
-
 
 # # Init stuff
 

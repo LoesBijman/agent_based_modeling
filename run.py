@@ -7,7 +7,7 @@ from mesa.visualization.ModularVisualization import ModularServer
 import numpy as np
 import pandas as pd
 
-from model_loes import CrowdModel, portrayal
+from model import CrowdModel, portrayal
 
 # Initialize visualization
 grid = CanvasGrid(portrayal, 20, 20, 500, 500)
@@ -19,7 +19,7 @@ exits = [ {"location": (0, height - 1), "radius": width // 2},
           {"location": (width - 1, height - 1), "radius": width // 2}]
 
 # Initialize the server with the model
-server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": 20, "height": 20, "N": 100, "fire_radius": 20//3, 'social_radius': 20//4, 'p_spreading': 0.2, 'p_spreading_environment': 0.3, 'exits': exits})
+server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": 20, "height": 20, "N": 100, "fire_radius": 20//3, 'social_radius': 20//4, 'p_spreading': 0.2, 'p_spreading_environment': 0.3, 'p_env_knowledge_params': [0,1,50,51], 'exits': exits})
 server.model = CrowdModel(20, 20, 100, 20//3, 20//4, 0.2, 0.3, exits)  # Reset the model
 server.model.run_model()
 data = server.model.datacollector.get_model_vars_dataframe()
