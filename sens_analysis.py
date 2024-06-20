@@ -28,7 +28,6 @@ fixed_params = {
     "width": 25,
     "height": 25,
     "N": int(0.25 * 25 * 25),  # 25% of the grid size
-    "fire_locations": 3  # Number of fire locations
 }
 
 # Function to adjust exits based on radius
