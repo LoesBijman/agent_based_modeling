@@ -189,7 +189,7 @@ class CrowdAgent(Agent):
         
         # Check if the agent has reached the goal or adjacent cell, and remove it from the model if it has
         if self.pos == self.current_goal:
-            print(f"Agent {self.unique_id} reached the goal!")
+            # print(f"Agent {self.unique_id} reached the goal!")
             self.model.grid.remove_agent(self)
             self.model.schedule.remove(self)
 
@@ -251,18 +251,18 @@ class CrowdModel(Model):
         self.running = True  # Initialize the running state
 
 
-        self.datacollector = DataCollector(
-            {"Agents Removed": lambda m: m.num_agents_removed}
-        )
-        self.num_agents_removed = 0  # Track the number of agents removed
-
-        # # Save data
         # self.datacollector = DataCollector(
-        #     {"Agents Removed": lambda m: m.num_agents_removed, 
-        #      "Agents Know Fire": lambda m: m.num_agents_know_fire,
-        #      "Exit Knowledge Spread": lambda m: m.exit_knowledge_spread,
-        #      "Change Goal": lambda m: m.change_goal})
-        # self.num_agents_removed = 0  # Number of agents removed
+        #     {"Agents Removed": lambda m: m.num_agents_removed}
+        # )
+        # self.num_agents_removed = 0  # Track the number of agents removed
+
+        # Save data
+        self.datacollector = DataCollector(
+            {"Agents Removed": lambda m: m.num_agents_removed, 
+             "Agents Know Fire": lambda m: m.num_agents_know_fire,
+             "Exit Knowledge Spread": lambda m: m.exit_knowledge_spread,
+             "Change Goal": lambda m: m.change_goal})
+        self.num_agents_removed = 0  # Number of agents removed
         self.num_agents_know_fire = 0 # Number of agents that know about the fire
         self.exit_knowledge_spread = 0 # Number of times agent tells another agent about a new exit
         self.change_goal = 0 # Number of times someone changes direction to a closer goal
@@ -318,18 +318,27 @@ class CrowdModel(Model):
         # Collect data on the number of CrowdAgents removed
         
         self.num_agents_removed = self.num_agents - sum(1 for agent in self.schedule.agents if isinstance(agent, CrowdAgent))
+        self.num_agents_know_fire = self.num_agents_know_fire
+        self.exit_knowledge_spread = self.exit_knowledge_spread
+        self.change_goal = self.change_goal
         self.datacollector.collect(self)
         self.schedule.step()
         
-        if self.num_agents_removed == self.num_agents:
+        print(f"Step: {self.schedule.steps}")
+        
+        # if self.num_agents_removed == self.num_agents:
+        #     self.running = False
+        #     # print the number of steps it took for all agents to reach the goal
+        #     print(f"Number of steps: {self.schedule.steps}")
+        
+        if self.schedule.steps == 150:
             self.running = False
-            # print the number of steps it took for all agents to reach the goal
             print(f"Number of steps: {self.schedule.steps}")
             
-        if all(not agent.knowledge_of_disaster for agent in self.schedule.agents if isinstance(agent, CrowdAgent)):
-            self.running = False
-            print(f"Evacuation failed... Number of people left: {self.num_agents - self.num_agents_removed}")
-            print(f"Number of steps: {self.schedule.steps}")
+        # if all(not agent.knowledge_of_disaster for agent in self.schedule.agents if isinstance(agent, CrowdAgent)):
+        #     self.running = False
+        #     print(f"Evacuation failed... Number of people left: {self.num_agents - self.num_agents_removed}")
+        #     print(f"Number of steps: {self.schedule.steps}")
 
 class Hazard(Agent):
     def __init__(self, unique_id, model):
@@ -414,27 +423,27 @@ def portrayal(agent):
 
 # Init stuff
 
-width = 25
-height = 25
+# width = 25
+# height = 25
 
-N = int(0.25 * width * height)
-fire_radius = 10
-social_radius = width // 10
-p_spreading = 0.2
-p_spreading_environment = 0.3
-p_env_knowledge_params = [3/25, 17/25] # uniform, threshold 1 (no knowledge), threshold 2 (one door known)
-evacuator_radius = social_radius * 4
+# N = int(0.25 * width * height)
+# fire_radius = 10
+# social_radius = width // 10
+# p_spreading = 0.2
+# p_spreading_environment = 0.3
+# p_env_knowledge_params = [3/25, 17/25] # uniform, threshold 1 (no knowledge), threshold 2 (one door known)
+# evacuator_radius = social_radius * 4
 
-exits = [ {"location": (0, height - 1), "radius": width // 2},
-          {"location": (width - 1, 0), "radius": width // 2},
-          {"location": (width - 1, height - 1), "radius": width // 2}]
-grid = CanvasGrid(portrayal, width, height)
+# exits = [ {"location": (0, height - 1), "radius": width // 2},
+#           {"location": (width - 1, 0), "radius": width // 2},
+#           {"location": (width - 1, height - 1), "radius": width // 2}]
+# grid = CanvasGrid(portrayal, width, height)
 
-server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, 'p_env_knowledge_params': p_env_knowledge_params, "fire_radius": fire_radius, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'exits': exits, 'evacuator_present':False, 'evacuator_radius':evacuator_radius})
-# server.port = 9984
-# server.launch()
+# server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, 'p_env_knowledge_params': p_env_knowledge_params, "fire_radius": fire_radius, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'exits': exits, 'evacuator_present':False, 'evacuator_radius':evacuator_radius})
+# # server.port = 9984
+# # server.launch()
 
-data = server.model.datacollector.get_model_vars_dataframe()
-data.to_csv("agents_removed_per_step.csv", index=False)
+# data = server.model.datacollector.get_model_vars_dataframe()
+# data.to_csv("agents_removed_per_step.csv", index=False)
 
-print("Data saved successfully!")
+# print("Data saved successfully!")
