@@ -26,12 +26,6 @@ class CrowdAgent(Agent):
     def __init__(self, unique_id, model):
         super().__init__(unique_id, model)
 
-        # Define the goals that the agent can move towards
-        # self.goals = [
-        #     {"location": (0, model.grid.height - 1), "priority": 1},
-        #     {"location": (model.grid.width - 1, 0), "priority": 2},
-        #     {"location": (model.grid.width - 1, model.grid.height - 1), "priority": 2}
-        # ]
         self.current_goal = None
         self.model.goals
 
@@ -72,6 +66,18 @@ class CrowdAgent(Agent):
         
         disaster_knowing_agents = [agent for agent in self.model.schedule.agents if isinstance(agent, CrowdAgent) and agent.knowledge_of_disaster]
 
+        #If evacuator present, the agent gains knowledge of disaster and all exits
+        if self.model.evacuator_present:
+            if np.linalg.norm(np.array(self.pos) - np.array(self.model.evacuator[0].pos)) < self.model.evacuator_radius:
+                self.knowledge_of_disaster = True
+                self.model.num_agents_know_fire += 1 # Count
+
+                current_knowledge = self.knowledge_of_environment
+            
+                for goal_dict in self.model.goals: #add exit knowledge
+                    if goal_dict not in current_knowledge:
+                        self.knowledge_of_environment.append(goal_dict['location'])
+                
         # Perform step
         if not self.knowledge_of_disaster:
             for dis_agent in disaster_knowing_agents:
@@ -219,12 +225,8 @@ class CrowdModel(Model):
         step(self): Advances the model by one step.
     """
 
-    def __init__(self, width, height, N, p_env_knowledge_params, fire_radius, social_radius, p_spreading, p_spreading_environment, exits, evacuator_present = False):
+    def __init__(self, width, height, N, p_env_knowledge_params, fire_radius, social_radius, p_spreading, p_spreading_environment, exits, evacuator_present = False, evacuator_radius = None):
         """
-        Initializes a CrowdModel object.
-server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "fire_radius": fire_radius, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'p_env_knowledge_params': p_env_knowledge_params, 'exits': exits})
-server.port = 9984
-server.launch()
         Args:
             width (int): The width of the model's grid.
             height (int): The height of the model's grid.
@@ -240,7 +242,10 @@ server.launch()
         self.p_spreading = p_spreading
         self.p_spreading_environment = p_spreading_environment
         self.p_env_knowledge_params = p_env_knowledge_params
+        self.evacuator_present = evacuator_present
+        self.evacuator_radius = evacuator_radius
         self.running = True  # Initialize the running state
+
 
         self.datacollector = DataCollector(
             {"Agents Removed": lambda m: m.num_agents_removed}
@@ -294,6 +299,7 @@ server.launch()
             evacuator = Evacuator(i, self)
             self.schedule.add(evacuator)
             self.grid.place_agent(evacuator, (width // 2, height // 2))
+            self.evacuator = [agent for agent in self.schedule.agents if isinstance(agent, Evacuator)]
 
     def step(self):
         """
@@ -407,15 +413,16 @@ social_radius = width // 10
 p_spreading = 0.2
 p_spreading_environment = 0.3
 p_env_knowledge_params = [0, 1, -1, 1] #gumbel distribution mean, spread, threshold 1, threshold 2
+evacuator_radius = social_radius * 2
 
 exits = [ {"location": (0, height - 1), "radius": width // 2},
           {"location": (width - 1, 0), "radius": width // 2},
           {"location": (width - 1, height - 1), "radius": width // 2}]
 grid = CanvasGrid(portrayal, width, height)
 
-server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "fire_radius": fire_radius, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'p_env_knowledge_params': p_env_knowledge_params, 'exits': exits, 'evacuator_present':False})
-server.port = 9984
-server.launch()
+server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "fire_radius": fire_radius, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'p_env_knowledge_params': p_env_knowledge_params, 'exits': exits, 'evacuator_present':False, 'evacuator_radius':evacuator_radius})
+# server.port = 9984
+# server.launch()
 
 data = server.model.datacollector.get_model_vars_dataframe()
 data.to_csv("agents_removed_per_step.csv", index=False)
