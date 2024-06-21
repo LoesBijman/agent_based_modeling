@@ -32,12 +32,13 @@ class CrowdAgent(Agent):
         self.knowledge_of_disaster = False
 
         #set environment knowledge stochastically
-        env_knowledge_chance = gumbel_r.rvs(loc = self.model.p_env_knowledge_params[0], scale = self.model.p_env_knowledge_params[1], size = 1)
+        # env_knowledge_chance = gumbel_r.rvs(loc = self.model.p_env_knowledge_params[0], scale = self.model.p_env_knowledge_params[1], size = 1)
+        env_knowledge_chance = np.random.uniform(0,1)
         self.knowledge_of_environment = []
 
-        if env_knowledge_chance < self.model.p_env_knowledge_params[2]:
+        if env_knowledge_chance < self.model.p_env_knowledge_params[0]:
             pass
-        elif env_knowledge_chance < self.model.p_env_knowledge_params[3]:
+        elif env_knowledge_chance < self.model.p_env_knowledge_params[1]:
             self.knowledge_of_environment = [self.model.goals[0]['location']]
         else:
             for goal_dict in self.model.goals:
@@ -412,17 +413,17 @@ fire_radius = 10
 social_radius = width // 10
 p_spreading = 0.2
 p_spreading_environment = 0.3
-p_env_knowledge_params = [0, 1, -1, 1] #gumbel distribution mean, spread, threshold 1, threshold 2
-evacuator_radius = social_radius * 2
+p_env_knowledge_params = [3/24, 16/24] # uniform, threshold 1 (no knowledge), threshold 2 (one door known)
+evacuator_radius = social_radius * 4
 
 exits = [ {"location": (0, height - 1), "radius": width // 2},
           {"location": (width - 1, 0), "radius": width // 2},
           {"location": (width - 1, height - 1), "radius": width // 2}]
 grid = CanvasGrid(portrayal, width, height)
 
-server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "fire_radius": fire_radius, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'p_env_knowledge_params': p_env_knowledge_params, 'exits': exits, 'evacuator_present':False, 'evacuator_radius':evacuator_radius})
-# server.port = 9984
-# server.launch()
+server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "fire_radius": fire_radius, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'p_env_knowledge_params': p_env_knowledge_params, 'exits': exits, 'evacuator_present':True, 'evacuator_radius':evacuator_radius})
+server.port = 9984
+server.launch()
 
 data = server.model.datacollector.get_model_vars_dataframe()
 data.to_csv("agents_removed_per_step.csv", index=False)
