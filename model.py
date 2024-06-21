@@ -32,12 +32,13 @@ class CrowdAgent(Agent):
         self.knowledge_of_disaster = False
 
         #set environment knowledge stochastically
-        env_knowledge_chance = gumbel_r.rvs(loc = self.model.p_env_knowledge_params[0], scale = self.model.p_env_knowledge_params[1], size = 1)
+        # env_knowledge_chance = gumbel_r.rvs(loc = self.model.p_env_knowledge_params[0], scale = self.model.p_env_knowledge_params[1], size = 1)
+        env_knowledge_chance = np.random.uniform(0,1)
         self.knowledge_of_environment = []
 
-        if env_knowledge_chance < self.model.p_env_knowledge_params[2]:
+        if env_knowledge_chance < self.model.p_env_knowledge_params[0]:
             pass
-        elif env_knowledge_chance < self.model.p_env_knowledge_params[3]:
+        elif env_knowledge_chance < self.model.p_env_knowledge_params[1]:
             self.knowledge_of_environment = [self.model.goals[0]['location']]
         else:
             for goal_dict in self.model.goals:
@@ -61,16 +62,18 @@ class CrowdAgent(Agent):
         # Update the agent's knowledge of the disaster
         for fire in self.model.fire:
             if np.linalg.norm(np.array(self.pos) - np.array(fire.pos)) < self.model.fire_radius:
-                self.knowledge_of_disaster = True
-                self.model.num_agents_know_fire += 1 # Count
+                if not self.knowledge_of_disaster:
+                    self.knowledge_of_disaster = True
+                    self.model.num_agents_know_fire += 1 # Count
         
         disaster_knowing_agents = [agent for agent in self.model.schedule.agents if isinstance(agent, CrowdAgent) and agent.knowledge_of_disaster]
 
         #If evacuator present, the agent gains knowledge of disaster and all exits
         if self.model.evacuator_present:
             if np.linalg.norm(np.array(self.pos) - np.array(self.model.evacuator[0].pos)) < self.model.evacuator_radius:
-                self.knowledge_of_disaster = True
-                self.model.num_agents_know_fire += 1 # Count
+                if not self.knowledge_of_disaster:
+                    self.knowledge_of_disaster = True
+                    self.model.num_agents_know_fire += 1 # Count
 
                 current_knowledge = self.knowledge_of_environment
             
@@ -82,11 +85,12 @@ class CrowdAgent(Agent):
         if not self.knowledge_of_disaster:
             for dis_agent in disaster_knowing_agents:
                 if np.linalg.norm(np.array(self.pos) - np.array(dis_agent.pos)) < self.model.social_radius:
-                    # spread knowledge stochastically
-                    u = np.random.uniform(0,1)
-                    if u < self.model.p_spreading:
-                        self.knowledge_of_disaster = True
-                        self.model.num_agents_know_fire += 1 # Count
+                    if not self.knowledge_of_disaster:
+                        # spread knowledge stochastically
+                        u = np.random.uniform(0,1)
+                        if u < self.model.p_spreading:
+                            self.knowledge_of_disaster = True
+                            self.model.num_agents_know_fire += 1 # Count
             self.stand_still()
 
         else:
@@ -271,13 +275,25 @@ class CrowdModel(Model):
             self.schedule.add(goal)
             self.grid.place_agent(goal, (x,y))
 
+        #Spawn an evacuator if in intervention mode
+        if evacuator_present:
+            evacuator = Evacuator(i, self)
+            self.schedule.add(evacuator)
+            self.grid.place_agent(evacuator, (width // 2, height // 2))
+            self.evacuator = [agent for agent in self.schedule.agents if isinstance(agent, Evacuator)]
+
         # Create a fire
         x = int(np.round(np.random.uniform(2, width - 3)))
         y = int(np.round(np.random.uniform(2, height - 3)))
+        if self.evacuator_present:
+            #spawn the fire outside evacuator radius
+            while np.linalg.norm(np.array([x, y]) - np.array(self.evacuator[0].pos)) < self.evacuator_radius: 
+                x = int(np.round(np.random.uniform(2, width - 3)))
+                y = int(np.round(np.random.uniform(2, height - 3))) 
+
         fire = Hazard(i, self)
         self.schedule.add(fire)
         self.grid.place_agent(fire, (x,y))
-
 
         # retrieve the fire locations
         self.fire = [agent for agent in self.schedule.agents if isinstance(agent, Hazard)]
@@ -294,12 +310,6 @@ class CrowdModel(Model):
             self.schedule.add(agent)
             self.grid.place_agent(agent, (x, y))
 
-        #Spawn an evacuator if in intervention mode
-        if evacuator_present:
-            evacuator = Evacuator(i, self)
-            self.schedule.add(evacuator)
-            self.grid.place_agent(evacuator, (width // 2, height // 2))
-            self.evacuator = [agent for agent in self.schedule.agents if isinstance(agent, Evacuator)]
 
     def step(self):
         """
@@ -412,8 +422,8 @@ fire_radius = 10
 social_radius = width // 10
 p_spreading = 0.2
 p_spreading_environment = 0.3
-p_env_knowledge_params = [0, 1, -1, 1] #gumbel distribution mean, spread, threshold 1, threshold 2
-evacuator_radius = social_radius * 2
+p_env_knowledge_params = [3/25, 17/25] # uniform, threshold 1 (no knowledge), threshold 2 (one door known)
+evacuator_radius = social_radius * 4
 
 exits = [ {"location": (0, height - 1), "radius": width // 2},
           {"location": (width - 1, 0), "radius": width // 2},
@@ -421,8 +431,8 @@ exits = [ {"location": (0, height - 1), "radius": width // 2},
 grid = CanvasGrid(portrayal, width, height)
 
 server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "fire_radius": fire_radius, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'p_env_knowledge_params': p_env_knowledge_params, 'exits': exits, 'evacuator_present':False, 'evacuator_radius':evacuator_radius})
-# server.port = 9984
-# server.launch()
+server.port = 9984
+server.launch()
 
 data = server.model.datacollector.get_model_vars_dataframe()
 data.to_csv("agents_removed_per_step.csv", index=False)
