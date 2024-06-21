@@ -60,20 +60,20 @@ class CrowdAgent(Agent):
         self.spread_knowledge()
         
         # Update the agent's knowledge of the disaster
-        # Loes count?
         for fire in self.model.fire:
             if np.linalg.norm(np.array(self.pos) - np.array(fire.pos)) < self.model.fire_radius:
-                self.knowledge_of_disaster = True
-                self.model.num_agents_know_fire += 1 # Count
+                if not self.knowledge_of_disaster:
+                    self.knowledge_of_disaster = True
+                    self.model.num_agents_know_fire += 1 # Count
         
         disaster_knowing_agents = [agent for agent in self.model.schedule.agents if isinstance(agent, CrowdAgent) and agent.knowledge_of_disaster]
 
         #If evacuator present, the agent gains knowledge of disaster and all exits
         if self.model.evacuator_present:
             if np.linalg.norm(np.array(self.pos) - np.array(self.model.evacuator[0].pos)) < self.model.evacuator_radius:
-                self.knowledge_of_disaster = True
-                # Loes count?
-                self.model.num_agents_know_fire += 1 # Count
+                if not self.knowledge_of_disaster:
+                    self.knowledge_of_disaster = True
+                    self.model.num_agents_know_fire += 1 # Count
 
                 current_knowledge = self.knowledge_of_environment
             
@@ -85,11 +85,12 @@ class CrowdAgent(Agent):
         if not self.knowledge_of_disaster:
             for dis_agent in disaster_knowing_agents:
                 if np.linalg.norm(np.array(self.pos) - np.array(dis_agent.pos)) < self.model.social_radius:
-                    # spread knowledge stochastically
-                    u = np.random.uniform(0,1)
-                    if u < self.model.p_spreading:
-                        self.knowledge_of_disaster = True
-                        self.model.num_agents_know_fire += 1 # Count
+                    if not self.knowledge_of_disaster:
+                        # spread knowledge stochastically
+                        u = np.random.uniform(0,1)
+                        if u < self.model.p_spreading:
+                            self.knowledge_of_disaster = True
+                            self.model.num_agents_know_fire += 1 # Count
             self.stand_still()
 
         else:
