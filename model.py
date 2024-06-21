@@ -430,9 +430,9 @@ exits = [ {"location": (0, height - 1), "radius": width // 2},
           {"location": (width - 1, height - 1), "radius": width // 2}]
 grid = CanvasGrid(portrayal, width, height)
 
-server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "fire_radius": fire_radius, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'p_env_knowledge_params': p_env_knowledge_params, 'exits': exits, 'evacuator_present':False, 'evacuator_radius':evacuator_radius})
-server.port = 9984
-server.launch()
+server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, 'p_env_knowledge_params': p_env_knowledge_params, "fire_radius": fire_radius, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'exits': exits, 'evacuator_present':False, 'evacuator_radius':evacuator_radius})
+# server.port = 9984
+# server.launch()
 
 data = server.model.datacollector.get_model_vars_dataframe()
 data.to_csv("agents_removed_per_step.csv", index=False)
