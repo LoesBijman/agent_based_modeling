@@ -219,10 +219,12 @@ class CrowdModel(Model):
         step(self): Advances the model by one step.
     """
 
-    def __init__(self, width, height, N, p_env_knowledge_params, fire_radius, social_radius, p_spreading, p_spreading_environment, exits):
+    def __init__(self, width, height, N, p_env_knowledge_params, fire_radius, social_radius, p_spreading, p_spreading_environment, exits, evacuator_present = False):
         """
         Initializes a CrowdModel object.
-
+server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "fire_radius": fire_radius, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'p_env_knowledge_params': p_env_knowledge_params, 'exits': exits})
+server.port = 9984
+server.launch()
         Args:
             width (int): The width of the model's grid.
             height (int): The height of the model's grid.
@@ -411,9 +413,9 @@ exits = [ {"location": (0, height - 1), "radius": width // 2},
           {"location": (width - 1, height - 1), "radius": width // 2}]
 grid = CanvasGrid(portrayal, width, height)
 
-# server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "fire_radius": fire_radius, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'p_env_knowledge_params': p_env_knowledge_params, 'exits': exits})
-# server.port = 9984
-# server.launch()
+server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "fire_radius": fire_radius, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'p_env_knowledge_params': p_env_knowledge_params, 'exits': exits, 'evacuator_present':False})
+server.port = 9984
+server.launch()
 
 data = server.model.datacollector.get_model_vars_dataframe()
 data.to_csv("agents_removed_per_step.csv", index=False)
