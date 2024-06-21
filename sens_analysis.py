@@ -28,6 +28,7 @@ fixed_params = {
     "width": 25,
     "height": 25,
     "N": int(0.25 * 25 * 25),  # 25% of the grid size
+    "p_env_knowledge_params": [0,1,-1,1]
 }
 
 # Function to adjust exits based on radius

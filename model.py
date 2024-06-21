@@ -216,7 +216,7 @@ class CrowdModel(Model):
         step(self): Advances the model by one step.
     """
 
-    def __init__(self, width, height, N, fire_radius, social_radius, p_spreading, p_spreading_environment, p_env_knowledge_params, exits):
+    def __init__(self, width, height, N, p_env_knowledge_params, fire_radius, social_radius, p_spreading, p_spreading_environment, exits):
         """
         Initializes a CrowdModel object.
 
@@ -379,7 +379,7 @@ def portrayal(agent):
 #           {"location": (width - 1, height - 1), "radius": width // 2}]
 # grid = CanvasGrid(portrayal, width, height)
 
-# server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "fire_radius": fire_radius, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'p_env_knowledge_params': p_env_knowledge_params, 'exits': exits})
+# server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, 'p_env_knowledge_params': p_env_knowledge_params, "fire_radius": fire_radius, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'exits': exits})
 # server.port = 9984
 # server.launch()
 
