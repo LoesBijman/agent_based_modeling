@@ -60,6 +60,7 @@ class CrowdAgent(Agent):
         self.spread_knowledge()
         
         # Update the agent's knowledge of the disaster
+        # Loes count?
         for fire in self.model.fire:
             if np.linalg.norm(np.array(self.pos) - np.array(fire.pos)) < self.model.fire_radius:
                 self.knowledge_of_disaster = True
@@ -71,6 +72,7 @@ class CrowdAgent(Agent):
         if self.model.evacuator_present:
             if np.linalg.norm(np.array(self.pos) - np.array(self.model.evacuator[0].pos)) < self.model.evacuator_radius:
                 self.knowledge_of_disaster = True
+                # Loes count?
                 self.model.num_agents_know_fire += 1 # Count
 
                 current_knowledge = self.knowledge_of_environment
@@ -413,7 +415,7 @@ fire_radius = 10
 social_radius = width // 10
 p_spreading = 0.2
 p_spreading_environment = 0.3
-p_env_knowledge_params = [3/24, 16/24] # uniform, threshold 1 (no knowledge), threshold 2 (one door known)
+p_env_knowledge_params = [3/25, 17/25] # uniform, threshold 1 (no knowledge), threshold 2 (one door known)
 evacuator_radius = social_radius * 4
 
 exits = [ {"location": (0, height - 1), "radius": width // 2},
