@@ -17,10 +17,10 @@ import numpy as np
 # Define the parameter bounds for sensitivity analysis
 parameter_bounds = {
     "social_radius": range(0, 15),  # Vary social radius from 2 to 5
-    "fire_radius": range(0, 15, 2),  # Vary fire radius from 5 to 10
-    "exit_radius": [0, 5, 10, 15, 20],  # Vary exit radius from 5 to 15
-    "p_spreading": np.arange(0, 1, 0.2),  # Vary spreading probability from 0.1 to 0.5
-    "p_spreading_environment": np.arange(0, 1, 0.2)  # Vary environment knowledge spreading probability from 0.1 to 0.5
+    "fire_radius": range(0, 30, 2),  # Vary fire radius from 5 to 10
+    "exit_radius": [0, 5, 10, 15, 20, 25, 30],  # Vary exit radius from 5 to 15
+    "p_spreading": np.arange(0, 1.1, 0.1),  # Vary spreading probability from 0.1 to 0.5
+    "p_spreading_environment": np.arange(0, 1.1, 0.1)  # Vary environment knowledge spreading probability from 0.1 to 0.5
 }
 
 # Define fixed parameters
@@ -74,7 +74,7 @@ def run_sensitivity_analysis():
                     model_cls=CrowdModel,
                     parameters=param_dict,
                     number_processes=None,  # Use all available processors
-                    iterations=10,  # Number of iterations per parameter set
+                    iterations=30,  # Number of iterations per parameter set
                     max_steps=700,  # Max steps for each run
                     data_collection_period=-1,  # Collect data at each step
                     display_progress=True  # Display progress bar
