@@ -275,13 +275,25 @@ class CrowdModel(Model):
             self.schedule.add(goal)
             self.grid.place_agent(goal, (x,y))
 
+        #Spawn an evacuator if in intervention mode
+        if evacuator_present:
+            evacuator = Evacuator(i, self)
+            self.schedule.add(evacuator)
+            self.grid.place_agent(evacuator, (width // 2, height // 2))
+            self.evacuator = [agent for agent in self.schedule.agents if isinstance(agent, Evacuator)]
+
         # Create a fire
         x = int(np.round(np.random.uniform(2, width - 3)))
         y = int(np.round(np.random.uniform(2, height - 3)))
+        if self.evacuator_present:
+            #spawn the fire outside evacuator radius
+            while np.linalg.norm(np.array([x, y]) - np.array(self.evacuator[0].pos)) < self.evacuator_radius: 
+                x = int(np.round(np.random.uniform(2, width - 3)))
+                y = int(np.round(np.random.uniform(2, height - 3))) 
+
         fire = Hazard(i, self)
         self.schedule.add(fire)
         self.grid.place_agent(fire, (x,y))
-
 
         # retrieve the fire locations
         self.fire = [agent for agent in self.schedule.agents if isinstance(agent, Hazard)]
@@ -298,12 +310,6 @@ class CrowdModel(Model):
             self.schedule.add(agent)
             self.grid.place_agent(agent, (x, y))
 
-        #Spawn an evacuator if in intervention mode
-        if evacuator_present:
-            evacuator = Evacuator(i, self)
-            self.schedule.add(evacuator)
-            self.grid.place_agent(evacuator, (width // 2, height // 2))
-            self.evacuator = [agent for agent in self.schedule.agents if isinstance(agent, Evacuator)]
 
     def step(self):
         """
@@ -424,7 +430,7 @@ exits = [ {"location": (0, height - 1), "radius": width // 2},
           {"location": (width - 1, height - 1), "radius": width // 2}]
 grid = CanvasGrid(portrayal, width, height)
 
-server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "fire_radius": fire_radius, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'p_env_knowledge_params': p_env_knowledge_params, 'exits': exits, 'evacuator_present':True, 'evacuator_radius':evacuator_radius})
+server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, "fire_radius": fire_radius, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'p_env_knowledge_params': p_env_knowledge_params, 'exits': exits, 'evacuator_present':False, 'evacuator_radius':evacuator_radius})
 server.port = 9984
 server.launch()
 
