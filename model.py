@@ -113,6 +113,7 @@ class CrowdAgent(Agent):
                 if 0 <= x < self.model.grid.width and 0 <= y < self.model.grid.height and self.model.grid.is_cell_empty((x, y)):
                     self.model.grid.move_agent(self, (x, y))   
             elif self.knowledge_of_environment:
+                # print current goal
                 goals_of_agents = self.knowledge_of_environment
 
                 # Calculate the distances
@@ -124,7 +125,7 @@ class CrowdAgent(Agent):
                 # Get the coordinates that are closest to your coordinates
                 closest_coords = goals_of_agents[min_index]
 
-                if self.current_goal != closest_coords:
+                if self.current_goal != closest_coords and self.current_goal is not None:
                     self.model.change_goal += 1 # Count
                     
                 self.current_goal = closest_coords 
@@ -423,11 +424,12 @@ def portrayal(agent):
 
 # Init stuff
 
-# width = 25
-# height = 25
+# width = 50
+# height = 50
 
 # N = int(0.25 * width * height)
-# fire_radius = 10
+# N = 10
+# fire_radius = np.inf
 # social_radius = width // 10
 # p_spreading = 0.2
 # p_spreading_environment = 0.3
@@ -440,8 +442,8 @@ def portrayal(agent):
 # grid = CanvasGrid(portrayal, width, height)
 
 # server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, 'p_env_knowledge_params': p_env_knowledge_params, "fire_radius": fire_radius, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'exits': exits, 'evacuator_present':False, 'evacuator_radius':evacuator_radius})
-# # server.port = 9984
-# # server.launch()
+# server.port = 9986
+# server.launch()
 
 # data = server.model.datacollector.get_model_vars_dataframe()
 # data.to_csv("agents_removed_per_step.csv", index=False)
