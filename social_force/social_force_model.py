@@ -61,6 +61,8 @@ class CrowdAgent(Agent):
         for goal in self.model.goals:
             if goal['location'] not in self.knowledge_of_environment:
                 if np.linalg.norm(np.array(self.pos) - np.array(goal['location'])) < goal['radius']:
+                    if not self.knowledge_of_environment:
+                        self.model.num_agents_know_an_exit +=1
                     self.knowledge_of_environment.append(goal['location'])
 
         # Spread knowledge of the environment
@@ -86,6 +88,8 @@ class CrowdAgent(Agent):
             
                 for goal_dict in self.model.goals: #add exit knowledge
                     if goal_dict not in current_knowledge:
+                        if not self.knowledge_of_environment:
+                            self.model.num_agents_know_an_exit +=1
                         self.knowledge_of_environment.append(goal_dict['location'])
                 
         # Perform step
@@ -131,7 +135,7 @@ class CrowdAgent(Agent):
                 # Get the coordinates that are closest to your coordinates
                 closest_coords = goals_of_agents[min_index]
 
-                if self.current_goal != closest_coords:
+                if self.current_goal != closest_coords  and self.current_goal is not None:
                     self.model.change_goal += 1 # Count
                     
                 self.current_goal = closest_coords 
@@ -153,6 +157,8 @@ class CrowdAgent(Agent):
                 if isinstance(neighbor, CrowdAgent):
                     if neighbor.current_goal:
                         if neighbor.current_goal not in self.knowledge_of_environment:
+                            if not self.knowledge_of_environment:
+                                self.model.num_agents_know_an_exit +=1
                             self.knowledge_of_environment.append(neighbor.current_goal)
                             self.model.exit_knowledge_spread += 1 # Count
                     
@@ -266,7 +272,7 @@ class CrowdAgent(Agent):
             # Define the possible moves and their associated angles
             moves = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
             angles = [0, 45, 90, 135, 180, 225, 270, 315, 360]
-            print(angle)
+            # print(angle)
             # Sort the moves based on how well they fit the angle
             next_angle = next((x for x in angles if angle <= x))
             i = angles.index(next_angle) - 1 # best move index, find the move that best matches the angle
@@ -363,11 +369,13 @@ class CrowdModel(Model):
             {"Agents Removed": lambda m: m.num_agents_removed, 
              "Agents Know Fire": lambda m: m.num_agents_know_fire,
              "Exit Knowledge Spread": lambda m: m.exit_knowledge_spread,
-             "Change Goal": lambda m: m.change_goal})
+             "Change Goal": lambda m: m.change_goal,
+             "Exit Knowledge": lambda m: m.num_agents_know_an_exit})
         self.num_agents_removed = 0  # Number of agents removed
         self.num_agents_know_fire = 0 # Number of agents that know about the fire
         self.exit_knowledge_spread = 0 # Number of times agent tells another agent about a new exit
         self.change_goal = 0 # Number of times someone changes direction to a closer goal
+        self.num_agents_know_an_exit = 0 # Number of agents that know about an exit
 
         self.goals = exits
 
@@ -412,6 +420,9 @@ class CrowdModel(Model):
             agent = CrowdAgent(i, self)
             self.schedule.add(agent)
             self.grid.place_agent(agent, (x, y))
+            #check if agent knows an exit
+            if agent.knowledge_of_environment:
+                self.num_agents_know_an_exit += 1
 
 
     def step(self):
@@ -424,6 +435,7 @@ class CrowdModel(Model):
         self.num_agents_know_fire = self.num_agents_know_fire
         self.exit_knowledge_spread = self.exit_knowledge_spread
         self.change_goal = self.change_goal
+        self.num_agents_know_an_exit = self.num_agents_know_an_exit
         self.datacollector.collect(self)
         self.schedule.step()
         
@@ -526,35 +538,35 @@ def portrayal(agent):
 
 # Init stuff
 
-width = 25
-height = 25
+# width = 25
+# height = 25
 
-N = int(0.25 * width * height)
-fire_radius = 10
-social_radius = width // 10
-p_spreading = 0.2
-p_spreading_environment = 0.3
-p_env_knowledge_params = [3/25, 17/25] # uniform, threshold 1 (no knowledge), threshold 2 (one door known)
-evacuator_radius = social_radius * 4
-fire_avoidance_radius = 1
-gumbel_params = [1,0.5,1,0.5] # mean and std of goal_attraction + mean and std of social_repulsion
+# N = int(0.25 * width * height)
+# fire_radius = 10
+# social_radius = width // 10
+# p_spreading = 0.2
+# p_spreading_environment = 0.3
+# p_env_knowledge_params = [3/25, 17/25] # uniform, threshold 1 (no knowledge), threshold 2 (one door known)
+# evacuator_radius = social_radius * 4
+# fire_avoidance_radius = 1
+# gumbel_params = [1,0.5,1,0.5] # mean and std of goal_attraction + mean and std of social_repulsion
 
-exits = [ {"location": (width // 2, height - 1), "radius": width // 10},
-          {"location": (0, 0), "radius": width // 13},
-          {"location": (width - 1, 0), "radius": width // 13}]
-grid = CanvasGrid(portrayal, width, height)
+# exits = [ {"location": (width // 2, height - 1), "radius": width // 10},
+#           {"location": (0, 0), "radius": width // 13},
+#           {"location": (width - 1, 0), "radius": width // 13}]
+# grid = CanvasGrid(portrayal, width, height)
 
-server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, 
-                                                           'p_env_knowledge_params': p_env_knowledge_params, 
-                                                           'fire_avoidance_radius': fire_avoidance_radius, 
-                                                           "fire_radius": fire_radius, 'social_radius': social_radius, 
-                                                           'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment,
-                                                           'exits': exits, 'gumbel_params': gumbel_params,
-                                                           'evacuator_present':False, 'evacuator_radius':evacuator_radius})
+# server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, 
+#                                                            'p_env_knowledge_params': p_env_knowledge_params, 
+#                                                            'fire_avoidance_radius': fire_avoidance_radius, 
+#                                                            "fire_radius": fire_radius, 'social_radius': social_radius, 
+#                                                            'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment,
+#                                                            'exits': exits, 'gumbel_params': gumbel_params,
+#                                                            'evacuator_present':False, 'evacuator_radius':evacuator_radius})
 # server.port = 9989
 # server.launch()
 
-data = server.model.datacollector.get_model_vars_dataframe()
-data.to_csv("agents_removed_per_step.csv", index=False)
+# data = server.model.datacollector.get_model_vars_dataframe()
+# data.to_csv("agents_removed_per_step.csv", index=False)
 
-print("Data saved successfully!")
+# print("Data saved successfully!")
