@@ -549,8 +549,8 @@ server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "heig
                                                            'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment,
                                                            'exits': exits, 'gumbel_params': gumbel_params,
                                                            'evacuator_present':False, 'evacuator_radius':evacuator_radius})
-server.port = 9989
-server.launch()
+# server.port = 9989
+# server.launch()
 
 data = server.model.datacollector.get_model_vars_dataframe()
 data.to_csv("agents_removed_per_step.csv", index=False)
