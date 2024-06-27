@@ -333,7 +333,7 @@ class CrowdModel(Model):
         step(self): Advances the model by one step.
     """
 
-    def __init__(self, width, height, N, p_env_knowledge_params, fire_radius, social_radius, p_spreading, p_spreading_environment, exits, evacuator_present = False, evacuator_radius = None, fire_avoidance_radius = 2, gumbel_params = [1, 0.5, 1, 0.5]):
+    def __init__(self, width, height, N, p_env_knowledge_params, fire_avoidance_radius, fire_radius, social_radius, p_spreading, p_spreading_environment, exits, gumbel_params, evacuator_present = False, evacuator_radius = None):
         """
         Args:
             width (int): The width of the model's grid.
@@ -544,10 +544,11 @@ grid = CanvasGrid(portrayal, width, height)
 
 server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, 
                                                            'p_env_knowledge_params': p_env_knowledge_params, 
+                                                           'fire_avoidance_radius': fire_avoidance_radius, 
                                                            "fire_radius": fire_radius, 'social_radius': social_radius, 
-                                                           'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 
-                                                           'exits': exits, 'evacuator_present':False, 'evacuator_radius':evacuator_radius, 
-                                                           'fire_avoidance_radius': fire_avoidance_radius, 'gumbel_params': gumbel_params})
+                                                           'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment,
+                                                           'exits': exits, 'gumbel_params': gumbel_params,
+                                                           'evacuator_present':False, 'evacuator_radius':evacuator_radius})
 server.port = 9989
 server.launch()
 
