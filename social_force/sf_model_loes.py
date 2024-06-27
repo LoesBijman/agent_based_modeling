@@ -40,6 +40,7 @@ class CrowdAgent(Agent):
         self.velocity = np.array([0,0]) # initial velocity CHECK to see if we can make it goal?
 
         self.goal_attraction = np.random.gumbel(loc = self.model.gumbel_params[0], scale = self.model.gumbel_params[1])
+        self.goal_attraction = max(0.1, self.goal_attraction) # you always want to go to the goal a litle bit
         self.social_repulsion = np.random.gumbel(loc = self.model.gumbel_params[2], scale = self.model.gumbel_params[3])
 
         if env_knowledge_chance < self.model.p_env_knowledge_params[0]:
@@ -534,7 +535,7 @@ server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "heig
                                                            'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 
                                                            'exits': exits, 'evacuator_present':False, 'evacuator_radius':evacuator_radius, 
                                                            'fire_avoidance_radius': fire_avoidance_radius, 'gumbel_params': gumbel_params})
-server.port = 9984
+server.port = 9989
 server.launch()
 
 # data = server.model.datacollector.get_model_vars_dataframe()
