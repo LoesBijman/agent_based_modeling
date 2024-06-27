@@ -263,10 +263,23 @@ class CrowdAgent(Agent):
 
         # Define the possible moves and their associated angles
         moves = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
-        angles = [0, 45, 90, 135, 180, 225, 270, 315]
+        angles = [0, 45, 90, 135, 180, 225, 270, 315, 360]
+
+        # Sort the moves based on how well they fit the angle
+        next_angle = next((x for x in angles if angle < x))
+        i = angles.index(next_angle) - 1 # best move index, find the move that best matches the angle
+        if next_angle - angle > 22.5: # closer to the angle below, thus the previous move first
+            j = -1
+        else:
+            j = 1
+
+        sorted_moves = [moves[i], moves[(i+j) % (len(moves) - 1)], moves[(i-j) % (len(moves) - 1)], 
+                        moves[(i+2*j) % (len(moves) - 1)], moves[(i-2*j) % (len(moves) - 1)], 
+                        moves[(i+3*j) % (len(moves) - 1)], moves[(1-3*j) % (len(moves) - 1)], 
+                        moves[(i+4*j) % (len(moves) - 1)]]
 
         # Create a list of moves sorted by their closeness to the desired angle
-        sorted_moves = sorted(zip(moves, angles), key=lambda x: abs(x[1] - angle))
+        # sorted_moves = sorted(zip(moves, angles), key=lambda x: abs(x[1] - angle))
 
         for move, _ in sorted_moves:
             new_position = np.array(self.pos) + np.array(move)
@@ -520,7 +533,7 @@ social_radius = width // 10
 p_spreading = 0.2
 p_spreading_environment = 0.3
 p_env_knowledge_params = [3/25, 17/25] # uniform, threshold 1 (no knowledge), threshold 2 (one door known)
-# evacuator_radius = social_radius * 4
+evacuator_radius = social_radius * 4
 fire_avoidance_radius = 1
 gumbel_params = [1,0.5,1,0.5] # mean and std of goal_attraction + mean and std of social_repulsion
 
