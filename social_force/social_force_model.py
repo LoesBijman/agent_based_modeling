@@ -258,39 +258,41 @@ class CrowdAgent(Agent):
 
         self.velocity = np.array(self.velocity) + acceleration * time_step
         new_pos = np.array(self.pos) + self.velocity * time_step
+        
         angle = np.arctan2(new_pos[1] - self.pos[1], new_pos[0] - self.pos[0]) * 180/np.pi
-        angle = (angle + 22.5) % 360
+        if not np.isnan(angle):
+            angle = (angle + 22.5) % 360
 
-        # Define the possible moves and their associated angles
-        moves = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
-        angles = [0, 45, 90, 135, 180, 225, 270, 315, 360]
+            # Define the possible moves and their associated angles
+            moves = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
+            angles = [0, 45, 90, 135, 180, 225, 270, 315, 360]
+            print(angle)
+            # Sort the moves based on how well they fit the angle
+            next_angle = next((x for x in angles if angle <= x))
+            i = angles.index(next_angle) - 1 # best move index, find the move that best matches the angle
+            if next_angle - angle > 22.5: # closer to the angle below, thus the previous move first
+                j = -1
+            else:
+                j = 1
 
-        # Sort the moves based on how well they fit the angle
-        next_angle = next((x for x in angles if angle < x))
-        i = angles.index(next_angle) - 1 # best move index, find the move that best matches the angle
-        if next_angle - angle > 22.5: # closer to the angle below, thus the previous move first
-            j = -1
-        else:
-            j = 1
+            sorted_moves = [moves[i], moves[(i+j) % (len(moves))], moves[(i-j) % (len(moves))], 
+                            moves[(i+2*j) % (len(moves))], moves[(i-2*j) % (len(moves))], 
+                            moves[(i+3*j) % (len(moves))], moves[(1-3*j) % (len(moves))], 
+                            moves[(i+4*j) % (len(moves))]]
+            
+            # Create a list of moves sorted by their closeness to the desired angle
+            # sorted_moves = sorted(zip(moves, angles), key=lambda x: abs(x[1] - angle))
 
-        sorted_moves = [moves[i], moves[(i+j) % (len(moves) - 1)], moves[(i-j) % (len(moves) - 1)], 
-                        moves[(i+2*j) % (len(moves) - 1)], moves[(i-2*j) % (len(moves) - 1)], 
-                        moves[(i+3*j) % (len(moves) - 1)], moves[(1-3*j) % (len(moves) - 1)], 
-                        moves[(i+4*j) % (len(moves) - 1)]]
-
-        # Create a list of moves sorted by their closeness to the desired angle
-        # sorted_moves = sorted(zip(moves, angles), key=lambda x: abs(x[1] - angle))
-
-        for move, _ in sorted_moves:
-            new_position = np.array(self.pos) + np.array(move)
-            if new_position[0] >= 0 and new_position[0] < self.model.grid.width and new_position[1] >= 0 and new_position[1] < self.model.grid.width:
-                cell_contents = self.model.grid.get_cell_list_contents([new_position])
-                if not any(isinstance(agent, CrowdAgent) for agent in cell_contents):
-                    neighborhood = self.model.grid.get_neighborhood(tuple(new_position), moore=True, radius = self.model.fire_avoidance_radius)
-                    if not any(isinstance(agent, Hazard) for cell in neighborhood for agent in self.model.grid.get_cell_list_contents([cell])):
-                        self.model.grid.move_agent(self, new_position)
-                        self.pos = tuple(self.pos)
-                        break  # Exit the loop once a valid move is found
+            for move in sorted_moves:
+                new_position = np.array(self.pos) + np.array(move)
+                if new_position[0] >= 0 and new_position[0] < self.model.grid.width and new_position[1] >= 0 and new_position[1] < self.model.grid.width:
+                    cell_contents = self.model.grid.get_cell_list_contents([new_position])
+                    if not any(isinstance(agent, CrowdAgent) for agent in cell_contents):
+                        neighborhood = self.model.grid.get_neighborhood(tuple(new_position), moore=True, radius = self.model.fire_avoidance_radius)
+                        if not any(isinstance(agent, Hazard) for cell in neighborhood for agent in self.model.grid.get_cell_list_contents([cell])):
+                            self.model.grid.move_agent(self, new_position)
+                            self.pos = tuple(self.pos)
+                            break # Exit the loop once a valid move is found
 
         if self.pos == self.current_goal:
             print(f"Agent {self.unique_id} reached the goal!")
