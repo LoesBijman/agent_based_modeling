@@ -272,7 +272,7 @@ class CrowdAgent(Agent):
             # Define the possible moves and their associated angles
             moves = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
             angles = [0, 45, 90, 135, 180, 225, 270, 315, 360]
-            print(angle)
+            # print(angle)
             # Sort the moves based on how well they fit the angle
             next_angle = next((x for x in angles if angle <= x))
             i = angles.index(next_angle) - 1 # best move index, find the move that best matches the angle
