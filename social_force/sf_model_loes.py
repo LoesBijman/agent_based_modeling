@@ -258,6 +258,7 @@ class CrowdAgent(Agent):
         self.velocity = np.array(self.velocity) + acceleration * time_step
         new_pos = np.array(self.pos) + self.velocity * time_step
         angle = np.arctan2(new_pos[1] - self.pos[1], new_pos[0] - self.pos[0]) * 180/np.pi
+        angle = (angle + 22.5) % 360
 
         # Define the possible moves and their associated angles
         moves = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
@@ -266,7 +267,7 @@ class CrowdAgent(Agent):
         # Create a list of moves sorted by their closeness to the desired angle
         sorted_moves = sorted(zip(moves, angles), key=lambda x: abs(x[1] - angle))
 
-        for move, move_angle in sorted_moves:
+        for move, _ in sorted_moves:
             new_position = np.array(self.pos) + np.array(move)
             if new_position[0] >= 0 and new_position[0] < self.model.grid.width and new_position[1] >= 0 and new_position[1] < self.model.grid.width:
                 cell_contents = self.model.grid.get_cell_list_contents([new_position])
@@ -519,7 +520,7 @@ p_spreading = 0.2
 p_spreading_environment = 0.3
 p_env_knowledge_params = [3/25, 17/25] # uniform, threshold 1 (no knowledge), threshold 2 (one door known)
 evacuator_radius = social_radius * 4
-fire_avoidance_radius = 2
+fire_avoidance_radius = 1
 gumbel_params = [1,0.5,1,0.5] # mean and std of goal_attraction + mean and std of social_repulsion
 
 exits = [ {"location": (0, height - 1), "radius": width // 2},
