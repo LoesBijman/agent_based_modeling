@@ -135,7 +135,7 @@ class CrowdAgent(Agent):
                 # Get the coordinates that are closest to your coordinates
                 closest_coords = goals_of_agents[min_index]
 
-                if self.current_goal != closest_coords:
+                if self.current_goal != closest_coords  and self.current_goal is not None:
                     self.model.change_goal += 1 # Count
                     
                 self.current_goal = closest_coords 
