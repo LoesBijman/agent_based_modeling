@@ -50,11 +50,13 @@ class CrowdAgent(Agent):
         Performs a step in the agent's behavior.
         """
         
-        # Update the agent's knowledge of the environment
+        # Update the agent's knowledge of the environment according to radius of exit
         for goal in self.model.goals:
             if goal['location'] not in self.knowledge_of_environment:
                 if np.linalg.norm(np.array(self.pos) - np.array(goal['location'])) < goal['radius']:
-                    self.knowledge_of_environment.append(goal['location'])
+                    if not self.knowledge_of_environment:
+                        self.model.num_agents_know_an_exit += 1 ############# ADDING    
+                    self.knowledge_of_environment.append(goal['location'])   
 
         # Spread knowledge of the environment
         self.spread_knowledge()
@@ -79,7 +81,9 @@ class CrowdAgent(Agent):
             
                 for goal_dict in self.model.goals: #add exit knowledge
                     if goal_dict not in current_knowledge:
-                        self.knowledge_of_environment.append(goal_dict['location'])
+                        if not self.knowledge_of_environment:
+                            self.model.num_agents_know_an_exit += 1 ############# ADDING  
+                        self.knowledge_of_environment.append(goal_dict['location'])  
                 
         # Perform step
         if not self.knowledge_of_disaster:
@@ -147,6 +151,8 @@ class CrowdAgent(Agent):
                 if isinstance(neighbor, CrowdAgent):
                     if neighbor.current_goal:
                         if neighbor.current_goal not in self.knowledge_of_environment:
+                            if not self.knowledge_of_environment:
+                                self.model.num_agents_know_an_exit += 1 ############# ADDING 
                             self.knowledge_of_environment.append(neighbor.current_goal)
                             self.model.exit_knowledge_spread += 1 # Count
                     
@@ -262,11 +268,13 @@ class CrowdModel(Model):
             {"Agents Removed": lambda m: m.num_agents_removed, 
              "Agents Know Fire": lambda m: m.num_agents_know_fire,
              "Exit Knowledge Spread": lambda m: m.exit_knowledge_spread,
-             "Change Goal": lambda m: m.change_goal})
+             "Change Goal": lambda m: m.change_goal,
+             "Exit Knowledge": lambda m: m.num_agents_know_an_exit})
         self.num_agents_removed = 0  # Number of agents removed
         self.num_agents_know_fire = 0 # Number of agents that know about the fire
         self.exit_knowledge_spread = 0 # Number of times agent tells another agent about a new exit
         self.change_goal = 0 # Number of times someone changes direction to a closer goal
+        self.num_agents_know_an_exit = 0 # Number of agents that know about an exit
 
         self.goals = exits
 
@@ -306,10 +314,13 @@ class CrowdModel(Model):
             while (x,y) in self.fire:
                 x = self.random.randint(0, width - 1)
                 y = self.random.randint(0, height - 1)
-
             agent = CrowdAgent(i, self)
             self.schedule.add(agent)
             self.grid.place_agent(agent, (x, y))
+            # check if agent knows an exit
+            if agent.knowledge_of_environment:
+                print("self.schedule.steps", self.schedule.steps)
+                self.num_agents_know_an_exit += 1
 
 
     def step(self):
@@ -322,6 +333,7 @@ class CrowdModel(Model):
         self.num_agents_know_fire = self.num_agents_know_fire
         self.exit_knowledge_spread = self.exit_knowledge_spread
         self.change_goal = self.change_goal
+        self.num_agents_know_an_exit = self.num_agents_know_an_exit
         self.datacollector.collect(self)
         self.schedule.step()
         
