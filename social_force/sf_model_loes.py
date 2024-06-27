@@ -39,6 +39,9 @@ class CrowdAgent(Agent):
         self.desired_velocity = 1.0 # (can still make it different for agents)
         self.velocity = np.array([0,0]) # initial velocity CHECK to see if we can make it goal?
 
+        self.goal_attraction = np.random.gumbel(loc = self.model.gumbel_params[0], scale = self.model.gumbel_params[1])
+        self.social_repulsion = np.random.gumbel(loc = self.model.gumbel_params[2], scale = self.model.gumbel_params[3])
+
         if env_knowledge_chance < self.model.p_env_knowledge_params[0]:
             pass
         elif env_knowledge_chance < self.model.p_env_knowledge_params[1]:
@@ -249,8 +252,7 @@ class CrowdAgent(Agent):
         f_desired = self.desired_force()
         f_repulsive = self.repulsive_force(time_step)
 
-        total_force = f_desired + f_repulsive
-        # total_force = f_desired
+        total_force = self.goal_attraction * f_desired + self.social_repulsion * f_repulsive
         acceleration = total_force
 
         self.velocity = np.array(self.velocity) + acceleration * time_step
@@ -269,14 +271,11 @@ class CrowdAgent(Agent):
             if new_position[0] >= 0 and new_position[0] < self.model.grid.width and new_position[1] >= 0 and new_position[1] < self.model.grid.width:
                 cell_contents = self.model.grid.get_cell_list_contents([new_position])
                 if not any(isinstance(agent, CrowdAgent) for agent in cell_contents):
-                    neighborhood = self.model.grid.get_neighborhood(tuple(new_position), moore=True, radius=2)
+                    neighborhood = self.model.grid.get_neighborhood(tuple(new_position), moore=True, radius = self.model.fire_avoidance_radius)
                     if not any(isinstance(agent, Hazard) for cell in neighborhood for agent in self.model.grid.get_cell_list_contents([cell])):
                         self.model.grid.move_agent(self, new_position)
                         self.pos = tuple(self.pos)
                         break  # Exit the loop once a valid move is found
-                    # self.model.grid.move_agent(self, new_position)
-                    # self.pos = tuple(self.pos)
-                    # break  # Exit the loop once a valid move is found
 
         if self.pos == self.current_goal:
             print(f"Agent {self.unique_id} reached the goal!")
@@ -319,7 +318,7 @@ class CrowdModel(Model):
         step(self): Advances the model by one step.
     """
 
-    def __init__(self, width, height, N, p_env_knowledge_params, fire_radius, social_radius, p_spreading, p_spreading_environment, exits, evacuator_present = False, evacuator_radius = None):
+    def __init__(self, width, height, N, p_env_knowledge_params, fire_radius, social_radius, p_spreading, p_spreading_environment, exits, evacuator_present = False, evacuator_radius = None, fire_avoidance_radius = 2, gumbel_params = [1, 0.5, 1, 0.5]):
         """
         Args:
             width (int): The width of the model's grid.
@@ -339,12 +338,8 @@ class CrowdModel(Model):
         self.evacuator_present = evacuator_present
         self.evacuator_radius = evacuator_radius
         self.running = True  # Initialize the running state
-
-
-        # self.datacollector = DataCollector(
-        #     {"Agents Removed": lambda m: m.num_agents_removed}
-        # )
-        # self.num_agents_removed = 0  # Track the number of agents removed
+        self.fire_avoidance_radius = fire_avoidance_radius
+        self.gumbel_params = gumbel_params
 
         # Save data
         self.datacollector = DataCollector(
@@ -365,7 +360,7 @@ class CrowdModel(Model):
             self.schedule.add(goal)
             self.grid.place_agent(goal, (x,y))
 
-        #Spawn an evacuator if in intervention mode
+        # Spawn an evacuator if in intervention mode
         if evacuator_present:
             evacuator = Evacuator(i, self)
             self.schedule.add(evacuator)
@@ -373,8 +368,8 @@ class CrowdModel(Model):
             self.evacuator = [agent for agent in self.schedule.agents if isinstance(agent, Evacuator)]
 
         # Create a fire
-        x = int(np.round(np.random.uniform(2, width - 3)))
-        y = int(np.round(np.random.uniform(2, height - 3)))
+        x = int(np.round(np.random.uniform(self.fire_avoidance_radius + 1, width - (self.fire_avoidance_radius + 2))))
+        y = int(np.round(np.random.uniform(self.fire_avoidance_radius + 1, width - (self.fire_avoidance_radius + 2))))
         if self.evacuator_present:
             #spawn the fire outside evacuator radius
             while np.linalg.norm(np.array([x, y]) - np.array(self.evacuator[0].pos)) < self.evacuator_radius: 
@@ -387,12 +382,13 @@ class CrowdModel(Model):
 
         # retrieve the fire locations
         self.fire = [agent for agent in self.schedule.agents if isinstance(agent, Hazard)]
+        fire_neighborhood = self.grid.get_neighborhood(fire.pos, moore = True, radius = self.fire_avoidance_radius)
             
         # Create agents and place them in the model
         for i in range(self.num_agents):
             x = self.random.randint(0, width - 1)
             y = self.random.randint(0, height - 1)
-            while (x,y) in self.fire:
+            while (x,y) in fire_neighborhood:
                 x = self.random.randint(0, width - 1)
                 y = self.random.randint(0, height - 1)
 
@@ -523,13 +519,20 @@ p_spreading = 0.2
 p_spreading_environment = 0.3
 p_env_knowledge_params = [3/25, 17/25] # uniform, threshold 1 (no knowledge), threshold 2 (one door known)
 evacuator_radius = social_radius * 4
+fire_avoidance_radius = 2
+gumbel_params = [1,0.5,1,0.5] # mean and std of goal_attraction + mean and std of social_repulsion
 
 exits = [ {"location": (0, height - 1), "radius": width // 2},
           {"location": (width - 1, 0), "radius": width // 2},
           {"location": (width - 1, height - 1), "radius": width // 2}]
 grid = CanvasGrid(portrayal, width, height)
 
-server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, 'p_env_knowledge_params': p_env_knowledge_params, "fire_radius": fire_radius, 'social_radius': social_radius, 'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 'exits': exits, 'evacuator_present':False, 'evacuator_radius':evacuator_radius})
+server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, 
+                                                           'p_env_knowledge_params': p_env_knowledge_params, 
+                                                           "fire_radius": fire_radius, 'social_radius': social_radius, 
+                                                           'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment, 
+                                                           'exits': exits, 'evacuator_present':False, 'evacuator_radius':evacuator_radius, 
+                                                           'fire_avoidance_radius': fire_avoidance_radius, 'gumbel_params': gumbel_params})
 server.port = 9984
 server.launch()
 
