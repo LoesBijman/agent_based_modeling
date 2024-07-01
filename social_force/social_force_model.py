@@ -546,14 +546,15 @@ def portrayal(agent):
 # social_radius = width // 10
 # p_spreading = 0.2
 # p_spreading_environment = 0.3
-# p_env_knowledge_params = [3/25, 17/25] # uniform, threshold 1 (no knowledge), threshold 2 (one door known)
+# p_env_knowledge_params = [25/25, 25/25] # uniform, threshold 1 (no knowledge), threshold 2 (one door known)
 # evacuator_radius = social_radius * 4
 # fire_avoidance_radius = 1
 # gumbel_params = [1,0.5,1,0.5] # mean and std of goal_attraction + mean and std of social_repulsion
-
-# exits = [ {"location": (width // 2, height - 1), "radius": width // 10},
-#           {"location": (0, 0), "radius": width // 13},
-#           {"location": (width - 1, 0), "radius": width // 13}]
+# print(width // 10)
+# print(width // 13)
+# exits = [ {"location": (width // 2, height - 1), "radius": 5},
+#           {"location": (0, 0), "radius": 3},
+#           {"location": (width - 1, 0), "radius": 3}]
 # grid = CanvasGrid(portrayal, width, height)
 
 # server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, 
