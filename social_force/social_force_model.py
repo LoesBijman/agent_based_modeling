@@ -379,7 +379,7 @@ class CrowdModel(Model):
         self.exit_knowledge_spread = 0 # Number of times agent tells another agent about a new exit
         self.change_goal = 0 # Number of times someone changes direction to a closer goal
         self.num_agents_know_an_exit = 0 # Number of agents that know about an exit
-
+        self.clustering_coefficient = 0
 
         self.goals = exits
 
@@ -586,7 +586,7 @@ server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "heig
                                                            'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment,
                                                            'exits': exits, 'gumbel_params': gumbel_params,
                                                            'evacuator_present':False, 'evacuator_radius':evacuator_radius})
-server.port = 9989
+server.port = 9988
 server.launch()
 
 data = server.model.datacollector.get_model_vars_dataframe()
