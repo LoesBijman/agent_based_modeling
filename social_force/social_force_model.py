@@ -6,6 +6,7 @@ from mesa.datacollection import DataCollector
 from mesa.visualization.ModularVisualization import ModularServer
 import numpy as np
 from scipy.stats import gumbel_r
+import networkx as nx
 
 class CrowdAgent(Agent):
     """
@@ -370,12 +371,15 @@ class CrowdModel(Model):
              "Agents Know Fire": lambda m: m.num_agents_know_fire,
              "Exit Knowledge Spread": lambda m: m.exit_knowledge_spread,
              "Change Goal": lambda m: m.change_goal,
-             "Exit Knowledge": lambda m: m.num_agents_know_an_exit})
+             "Exit Knowledge": lambda m: m.num_agents_know_an_exit,
+             "Clustering Coefficient": lambda m: m.clustering_coefficient})
+        # print(self.datacollector.model_vars)
         self.num_agents_removed = 0  # Number of agents removed
         self.num_agents_know_fire = 0 # Number of agents that know about the fire
         self.exit_knowledge_spread = 0 # Number of times agent tells another agent about a new exit
         self.change_goal = 0 # Number of times someone changes direction to a closer goal
         self.num_agents_know_an_exit = 0 # Number of agents that know about an exit
+        self.clustering_coefficient = 0
 
         self.goals = exits
 
@@ -436,7 +440,9 @@ class CrowdModel(Model):
         self.exit_knowledge_spread = self.exit_knowledge_spread
         self.change_goal = self.change_goal
         self.num_agents_know_an_exit = self.num_agents_know_an_exit
+        self.clustering_coefficient = self.calculate_clustering_coefficient()
         self.datacollector.collect(self)
+        print(self.datacollector.model_vars)
         self.schedule.step()
         
         print(f"Step: {self.schedule.steps}")
@@ -454,6 +460,22 @@ class CrowdModel(Model):
         #     self.running = False
         #     print(f"Evacuation failed... Number of people left: {self.num_agents - self.num_agents_removed}")
         #     print(f"Number of steps: {self.schedule.steps}")
+
+    def calculate_clustering_coefficient(self):
+        """ Calculate the clustering coefficient of the model. """
+        print("Calculating clustering coefficient...")
+        G = nx.Graph()
+        for agent in self.schedule.agents:
+            if isinstance(agent, CrowdAgent):
+                G.add_node(agent)
+        for agent in self.schedule.agents:
+            if isinstance(agent, CrowdAgent):
+                neighbors = self.grid.get_neighbors(agent.pos, moore=True, radius=1)
+                for neighbor in neighbors:
+                    if isinstance(neighbor, CrowdAgent):
+                        G.add_edge(agent, neighbor)
+        clustering_coefficient = nx.average_clustering(G)
+        return clustering_coefficient
 
 class Hazard(Agent):
     def __init__(self, unique_id, model):
@@ -538,36 +560,36 @@ def portrayal(agent):
 
 # Init stuff
 
-# width = 25
-# height = 25
+width = 25
+height = 25
 
-# N = int(0.25 * width * height)
-# fire_radius = 10
-# social_radius = width // 10
-# p_spreading = 0.2
-# p_spreading_environment = 0.3
-# p_env_knowledge_params = [25/25, 25/25] # uniform, threshold 1 (no knowledge), threshold 2 (one door known)
-# evacuator_radius = social_radius * 4
-# fire_avoidance_radius = 1
-# gumbel_params = [1,0.5,1,0.5] # mean and std of goal_attraction + mean and std of social_repulsion
-# print(width // 10)
-# print(width // 13)
-# exits = [ {"location": (width // 2, height - 1), "radius": 5},
-#           {"location": (0, 0), "radius": 3},
-#           {"location": (width - 1, 0), "radius": 3}]
-# grid = CanvasGrid(portrayal, width, height)
+N = int(0.25 * width * height)
+fire_radius = 10
+social_radius = width // 10
+p_spreading = 0.2
+p_spreading_environment = 0.3
+p_env_knowledge_params = [25/25, 25/25] # uniform, threshold 1 (no knowledge), threshold 2 (one door known)
+evacuator_radius = social_radius * 4
+fire_avoidance_radius = 1
+gumbel_params = [1,0.5,1,0.5] # mean and std of goal_attraction + mean and std of social_repulsion
+print(width // 10)
+print(width // 13)
+exits = [ {"location": (width // 2, height - 1), "radius": 5},
+          {"location": (0, 0), "radius": 3},
+          {"location": (width - 1, 0), "radius": 3}]
+grid = CanvasGrid(portrayal, width, height)
 
-# server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, 
-#                                                            'p_env_knowledge_params': p_env_knowledge_params, 
-#                                                            'fire_avoidance_radius': fire_avoidance_radius, 
-#                                                            "fire_radius": fire_radius, 'social_radius': social_radius, 
-#                                                            'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment,
-#                                                            'exits': exits, 'gumbel_params': gumbel_params,
-#                                                            'evacuator_present':False, 'evacuator_radius':evacuator_radius})
-# server.port = 9989
-# server.launch()
+server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "height": height, "N": N, 
+                                                           'p_env_knowledge_params': p_env_knowledge_params, 
+                                                           'fire_avoidance_radius': fire_avoidance_radius, 
+                                                           "fire_radius": fire_radius, 'social_radius': social_radius, 
+                                                           'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment,
+                                                           'exits': exits, 'gumbel_params': gumbel_params,
+                                                           'evacuator_present':False, 'evacuator_radius':evacuator_radius})
+server.port = 9988
+server.launch()
 
-# data = server.model.datacollector.get_model_vars_dataframe()
-# data.to_csv("agents_removed_per_step.csv", index=False)
+data = server.model.datacollector.get_model_vars_dataframe()
+data.to_csv("agents_removed_per_step.csv", index=False)
 
-# print("Data saved successfully!")
+print("Data saved successfully!")
