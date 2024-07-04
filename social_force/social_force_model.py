@@ -442,7 +442,6 @@ class CrowdModel(Model):
         self.num_agents_know_an_exit = self.num_agents_know_an_exit
         self.clustering_coefficient = self.calculate_clustering_coefficient()
         self.datacollector.collect(self)
-        print(self.datacollector.model_vars)
         self.schedule.step()
         
         print(f"Step: {self.schedule.steps}")
@@ -463,7 +462,6 @@ class CrowdModel(Model):
 
     def calculate_clustering_coefficient(self):
         """ Calculate the clustering coefficient of the model. """
-        print("Calculating clustering coefficient...")
         G = nx.Graph()
         for agent in self.schedule.agents:
             if isinstance(agent, CrowdAgent):
