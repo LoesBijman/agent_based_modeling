@@ -472,6 +472,11 @@ class CrowdModel(Model):
                 for neighbor in neighbors:
                     if isinstance(neighbor, CrowdAgent):
                         G.add_edge(agent, neighbor)
+                        
+        if len(G) == 0:
+            # If there are no nodes in the graph, return 0
+            return 0.0
+    
         clustering_coefficient = nx.average_clustering(G)
         return clustering_coefficient
 
