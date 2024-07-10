@@ -1,9 +1,9 @@
 # Evaluating the Impact of Environmental Familiarity and Intervention Strategies on Crowd Evacuation Dynamics in Emergency Situations
 ### _Agent-Based Modelling Course 2024 | MSc Computational Science (UvA/VU)_
 
-This study uses agent-based modelling to investigate how environmental familiarity (knowledge of exits)
+This study uses agent-based modeling to investigate how environmental familiarity (knowledge of exits)
 and intervention strategies (such as disaster announcement, guides and exit signage) affect 
-crowd dynamics during emergency evacuations. The model build in this Github repository seeks to answer the following research question: _How do varying levels of environmental familiarity and the implementation of intervention strategies influence the speed of crowd evacuations in public spaces under an emergency situation?_ Through computational modeling and simulations, this research aims to provide insights that inform the design of more effective evacuation protocols tailored to diverse environmental and social contexts.
+crowd dynamics during emergency evacuations. The model developed in this Github repository seeks to answer the following research question: _How do varying levels of environmental familiarity and the implementation of intervention strategies influence the speed of crowd evacuations in public spaces under an emergency situation?_ To explore this research question, a computational social force model was implemented. Through simulations of this model, this study aims to provide insights that inform the design of more effective evacuation protocols tailored to diverse environmental and social contexts.
 
 ### Prerequisites
 The following Python packages are needed to run the model:
