@@ -338,16 +338,29 @@ class CrowdModel(Model):
         goal_radius (float): The radius of the goal area.
 
     Methods:
-        __init__(self, width, height, N, goal_radius): Initializes the crowd model.
+        __init__(self, width, height, N, p_env_knowledge_params, fire_avoidance_radius, fire_radius, social_radius, p_spreading, p_spreading_environment, exits, gumbel_params, evacuator_present=False, evacuator_radius=None): Initializes the crowd model.
         step(self): Advances the model by one step.
+        calculate_clustering_coefficient(self): Calculates the clustering coefficient of the model.
     """
 
-    def __init__(self, width, height, N, p_env_knowledge_params, fire_avoidance_radius, fire_radius, social_radius, p_spreading, p_spreading_environment, exits, gumbel_params, evacuator_present = False, evacuator_radius = None):
+    def __init__(self, width, height, N, p_env_knowledge_params, fire_avoidance_radius, fire_radius, social_radius, p_spreading, p_spreading_environment, exits, gumbel_params, evacuator_present=False, evacuator_radius=None):
         """
+        Initializes the crowd model.
+
         Args:
             width (int): The width of the model's grid.
             height (int): The height of the model's grid.
             N (int): The number of agents in the model.
+            p_env_knowledge_params (float): The parameter for environment knowledge probability.
+            fire_avoidance_radius (float): The radius for fire avoidance.
+            fire_radius (float): The radius of the fire.
+            social_radius (float): The social radius for agent interactions.
+            p_spreading (float): The probability of spreading knowledge.
+            p_spreading_environment (float): The probability of spreading environment knowledge.
+            exits (list): A list of dictionaries representing the exits with their locations.
+            gumbel_params (tuple): A tuple of parameters for Gumbel distribution.
+            evacuator_present (bool, optional): Whether an evacuator is present in the model. Defaults to False.
+            evacuator_radius (float, optional): The radius of the evacuator. Defaults to None.
         """
 
         self.N = N
@@ -411,7 +424,7 @@ class CrowdModel(Model):
 
         # retrieve the fire locations
         self.fire = [agent for agent in self.schedule.agents if isinstance(agent, Hazard)]
-        fire_neighborhood = self.grid.get_neighborhood(fire.pos, moore = True, radius = self.fire_avoidance_radius)
+        fire_neighborhood = self.grid.get_neighborhood(fire.pos, moore=True, radius=self.fire_avoidance_radius)
             
         # Create agents and place them in the model
         for i in range(self.num_agents):
@@ -461,7 +474,12 @@ class CrowdModel(Model):
         #     print(f"Number of steps: {self.schedule.steps}")
 
     def calculate_clustering_coefficient(self):
-        """ Calculate the clustering coefficient of the model. """
+        """
+        Calculate the clustering coefficient of the model.
+
+        Returns:
+            float: The clustering coefficient of the model.
+        """
         G = nx.Graph()
         for agent in self.schedule.agents:
             if isinstance(agent, CrowdAgent):
@@ -589,8 +607,8 @@ server = ModularServer(CrowdModel, [grid], "Crowd Model", {"width": width, "heig
                                                            'p_spreading': p_spreading, 'p_spreading_environment': p_spreading_environment,
                                                            'exits': exits, 'gumbel_params': gumbel_params,
                                                            'evacuator_present':False, 'evacuator_radius':evacuator_radius})
-server.port = 9989
-server.launch()
+server.port = 9800
+# server.launch()
 
 # data = server.model.datacollector.get_model_vars_dataframe()
 # data.to_csv("agents_removed_per_step.csv", index=False)
